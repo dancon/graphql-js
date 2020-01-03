@@ -2,7 +2,9 @@
 
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
+
 import inspect from '../inspect';
+import invariant from '../invariant';
 import nodejsCustomInspectSymbol from '../nodejsCustomInspectSymbol';
 
 describe('inspect', () => {
@@ -34,10 +36,11 @@ describe('inspect', () => {
   });
 
   it('function', () => {
-    expect(inspect(/* istanbul ignore next */ () => 0)).to.equal('[function]');
+    expect(inspect(() => invariant(false))).to.equal('[function]');
 
-    /* istanbul ignore next */
-    function testFunc() {}
+    function testFunc() {
+      invariant(false);
+    }
     expect(inspect(testFunc)).to.equal('[function testFunc]');
   });
 
@@ -101,7 +104,7 @@ describe('inspect', () => {
   it('custom symbol inspect is take precedence', () => {
     const object = {
       inspect() {
-        return '<custom inspect>';
+        invariant(false);
       },
       [String(nodejsCustomInspectSymbol)]() {
         return '<custom symbol inspect>';
@@ -163,7 +166,7 @@ describe('inspect', () => {
     expect(inspect(customA)).to.equal('[Circular]');
   });
 
-  it('Use class names for the shortform of an object', () => {
+  it('Use class names for the short form of an object', () => {
     class Foo {
       foo: string;
 
@@ -176,5 +179,10 @@ describe('inspect', () => {
 
     (Foo.prototype: any)[Symbol.toStringTag] = 'Bar';
     expect(inspect([[new Foo()]])).to.equal('[[[Bar]]]');
+
+    const objectWithoutClassName = new (function() {
+      this.foo = 1;
+    })();
+    expect(inspect([[objectWithoutClassName]])).to.equal('[[[Object]]]');
   });
 });

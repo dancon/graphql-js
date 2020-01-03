@@ -1,11 +1,10 @@
 // @flow strict
 
 import { describe, it } from 'mocha';
+
+import { VariablesAreInputTypes } from '../rules/VariablesAreInputTypes';
+
 import { expectValidationErrors } from './harness';
-import {
-  VariablesAreInputTypes,
-  nonInputTypeOnVarMessage,
-} from '../rules/VariablesAreInputTypes';
 
 function expectErrors(queryStr) {
   return expectValidationErrors(VariablesAreInputTypes, queryStr);
@@ -32,15 +31,15 @@ describe('Validate: Variables are input types', () => {
     `).to.deep.equal([
       {
         locations: [{ line: 2, column: 21 }],
-        message: nonInputTypeOnVarMessage('a', 'Dog'),
+        message: 'Variable "$a" cannot be non-input type "Dog".',
       },
       {
         locations: [{ line: 2, column: 30 }],
-        message: nonInputTypeOnVarMessage('b', '[[CatOrDog!]]!'),
+        message: 'Variable "$b" cannot be non-input type "[[CatOrDog!]]!".',
       },
       {
         locations: [{ line: 2, column: 50 }],
-        message: nonInputTypeOnVarMessage('c', 'Pet'),
+        message: 'Variable "$c" cannot be non-input type "Pet".',
       },
     ]);
   });

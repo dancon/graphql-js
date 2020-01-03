@@ -1,11 +1,10 @@
 // @flow strict
 
 import { describe, it } from 'mocha';
+
+import { ExecutableDefinitions } from '../rules/ExecutableDefinitions';
+
 import { expectValidationErrors } from './harness';
-import {
-  ExecutableDefinitions,
-  nonExecutableDefinitionMessage,
-} from '../rules/ExecutableDefinitions';
 
 function expectErrors(queryStr) {
   return expectValidationErrors(ExecutableDefinitions, queryStr);
@@ -13,13 +12,6 @@ function expectErrors(queryStr) {
 
 function expectValid(queryStr) {
   expectErrors(queryStr).to.deep.equal([]);
-}
-
-function nonExecutableDefinition(defName, line, column) {
-  return {
-    message: nonExecutableDefinitionMessage(defName),
-    locations: [{ line, column }],
-  };
 }
 
 describe('Validate: Executable definitions', () => {
@@ -64,8 +56,14 @@ describe('Validate: Executable definitions', () => {
         color: String
       }
     `).to.deep.equal([
-      nonExecutableDefinition('Cow', 8, 7),
-      nonExecutableDefinition('Dog', 12, 7),
+      {
+        message: 'The "Cow" definition is not executable.',
+        locations: [{ line: 8, column: 7 }],
+      },
+      {
+        message: 'The "Dog" definition is not executable.',
+        locations: [{ line: 12, column: 7 }],
+      },
     ]);
   });
 
@@ -81,9 +79,18 @@ describe('Validate: Executable definitions', () => {
 
       extend schema @directive
     `).to.deep.equal([
-      nonExecutableDefinition('schema', 2, 7),
-      nonExecutableDefinition('Query', 6, 7),
-      nonExecutableDefinition('schema', 10, 7),
+      {
+        message: 'The schema definition is not executable.',
+        locations: [{ line: 2, column: 7 }],
+      },
+      {
+        message: 'The "Query" definition is not executable.',
+        locations: [{ line: 6, column: 7 }],
+      },
+      {
+        message: 'The schema definition is not executable.',
+        locations: [{ line: 10, column: 7 }],
+      },
     ]);
   });
 });

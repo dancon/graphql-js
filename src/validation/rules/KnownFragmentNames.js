@@ -1,12 +1,9 @@
 // @flow strict
 
-import { type ValidationContext } from '../ValidationContext';
 import { GraphQLError } from '../../error/GraphQLError';
 import { type ASTVisitor } from '../../language/visitor';
 
-export function unknownFragmentMessage(fragName: string): string {
-  return `Unknown fragment "${fragName}".`;
-}
+import { type ValidationContext } from '../ValidationContext';
 
 /**
  * Known fragment names
@@ -21,7 +18,7 @@ export function KnownFragmentNames(context: ValidationContext): ASTVisitor {
       const fragment = context.getFragment(fragmentName);
       if (!fragment) {
         context.reportError(
-          new GraphQLError(unknownFragmentMessage(fragmentName), node.name),
+          new GraphQLError(`Unknown fragment "${fragmentName}".`, node.name),
         );
       }
     },

@@ -2,6 +2,7 @@
 
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
+
 import dedent from '../dedent';
 
 describe('dedent', () => {
@@ -33,13 +34,13 @@ describe('dedent', () => {
 
   it('removes only the first level of indentation', () => {
     const output = dedent`
-            qux
-              quux
-                quuux
-                  quuuux
+            first
+              second
+                third
+                  fourth
     `;
     expect(output).to.equal(
-      ['qux', '  quux', '    quuux', '      quuuux', ''].join('\n'),
+      ['first', '  second', '    third', '      fourth', ''].join('\n'),
     );
   });
 
@@ -57,15 +58,6 @@ describe('dedent', () => {
         '',
       ].join('\n'),
     );
-  });
-
-  it('also works as an ordinary function on strings', () => {
-    const output = dedent(`
-      type Query {
-        me: User
-      }
-    `);
-    expect(output).to.equal(['type Query {', '  me: User', '}', ''].join('\n'));
   });
 
   it('also removes indentation using tabs', () => {

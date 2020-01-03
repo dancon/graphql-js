@@ -12,7 +12,7 @@ When you are using the `GraphQLSchema` constructor to create a schema, instead o
 
 For example, let's say we are building a simple API that lets you fetch user data for a few hardcoded users based on an id. Using `buildSchema` we could write a server with:
 
-```javascript
+```js
 var express = require('express');
 var graphqlHTTP = require('express-graphql');
 var { buildSchema } = require('graphql');
@@ -30,46 +30,50 @@ var schema = buildSchema(`
 
 // Maps id to User object
 var fakeDatabase = {
-  'a': {
+  a: {
     id: 'a',
     name: 'alice',
   },
-  'b': {
+  b: {
     id: 'b',
     name: 'bob',
   },
 };
 
 var root = {
-  user: function ({id}) {
+  user: function({ id }) {
     return fakeDatabase[id];
-  }
+  },
 };
 
 var app = express();
-app.use('/graphql', graphqlHTTP({
-  schema: schema,
-  rootValue: root,
-  graphiql: true,
-}));
-app.listen(4000);
-console.log('Running a GraphQL API server at localhost:4000/graphql');
+app.use(
+  '/graphql',
+  graphqlHTTP({
+    schema: schema,
+    rootValue: root,
+    graphiql: true,
+  }),
+);
+app.listen(4000, () => {
+  console.log('Running a GraphQL API server at localhost:4000/graphql');
+});
 ```
 
 We can implement this same API without using GraphQL schema language:
 
-```javascript
+```js
 var express = require('express');
 var graphqlHTTP = require('express-graphql');
 var graphql = require('graphql');
 
 // Maps id to User object
 var fakeDatabase = {
-  'a': {
+  a: {
     id: 'a',
     name: 'alice',
   },
-  'b': {
+  b: {
     id: 'b',
     name: 'bob',
   },
@@ -81,7 +85,7 @@ var userType = new graphql.GraphQLObjectType({
   fields: {
     id: { type: graphql.GraphQLString },
     name: { type: graphql.GraphQLString },
-  }
+  },
 });
 
 // Define the Query type
@@ -92,24 +96,28 @@ var queryType = new graphql.GraphQLObjectType({
       type: userType,
       // `args` describes the arguments that the `user` query accepts
       args: {
-        id: { type: graphql.GraphQLString }
+        id: { type: graphql.GraphQLString },
       },
-      resolve: function (_, {id}) {
+      resolve: function(_, { id }) {
         return fakeDatabase[id];
-      }
-    }
-  }
+      },
+    },
+  },
 });
 
-var schema = new graphql.GraphQLSchema({query: queryType});
+var schema = new graphql.GraphQLSchema({ query: queryType });
 
 var app = express();
-app.use('/graphql', graphqlHTTP({
-  schema: schema,
-  graphiql: true,
-}));
-app.listen(4000);
-console.log('Running a GraphQL API server at localhost:4000/graphql');
+app.use(
+  '/graphql',
+  graphqlHTTP({
+    schema: schema,
+    graphiql: true,
+  }),
+);
+app.listen(4000, () => {
+  console.log('Running a GraphQL API server at localhost:4000/graphql');
+});
 ```
 
 When we use this method of creating the API, the root level resolvers are implemented on the `Query` and `Mutation` types rather than on a `root` object.

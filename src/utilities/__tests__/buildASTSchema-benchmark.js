@@ -1,13 +1,15 @@
 // @flow strict
 
-import { bigSchemaSDL } from '../../__fixtures__';
+import { parse } from '../../language/parser';
 
-import { parse } from '../../';
 import { buildASTSchema } from '../buildASTSchema';
+
+import { bigSchemaSDL } from '../../__fixtures__';
 
 const schemaAST = parse(bigSchemaSDL);
 
 export const name = 'Build Schema from AST';
+export const count = 10;
 export function measure() {
   buildASTSchema(schemaAST, { assumeValid: true });
 }

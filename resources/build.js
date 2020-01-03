@@ -26,6 +26,11 @@ if (require.main === module) {
   for (const filepath of srcFiles) {
     if (filepath.endsWith('.js')) {
       buildJSFile(filepath);
+    } else if (filepath.endsWith('.d.ts')) {
+      const srcPath = path.join('./src', filepath);
+      const destPath = path.join('./dist', filepath);
+
+      copyFile(srcPath, destPath);
     }
   }
 
@@ -45,8 +50,8 @@ function showStats() {
 
   for (const filepath of readdirRecursive('./dist')) {
     const name = filepath.split(path.sep).pop();
-    const [base, ...splitedExt] = name.split('.');
-    const ext = splitedExt.join('.');
+    const [base, ...splitExt] = name.split('.');
+    const ext = splitExt.join('.');
 
     const filetype = ext ? '*.' + ext : base;
     fileTypes[filetype] = fileTypes[filetype] || { filepaths: [], size: 0 };
@@ -100,13 +105,14 @@ function buildJSFile(filepath) {
 
 function buildPackageJSON() {
   const packageJSON = require('../package.json');
+  delete packageJSON.private;
   delete packageJSON.scripts;
   delete packageJSON.devDependencies;
 
   const { preReleaseTag } = parseSemver(packageJSON.version);
   if (preReleaseTag != null) {
     const [tag] = preReleaseTag.split('.');
-    assert(tag === 'rc', 'Only "rc" tag is supported.');
+    assert(['alpha', 'beta', 'rc'].includes(tag), `"${tag}" tag is supported.`);
 
     assert(!packageJSON.publishConfig, 'Can not override "publishConfig".');
     packageJSON.publishConfig = { tag: tag || 'latest' };

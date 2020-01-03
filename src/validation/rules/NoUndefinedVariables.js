@@ -1,14 +1,9 @@
 // @flow strict
 
-import { type ValidationContext } from '../ValidationContext';
 import { GraphQLError } from '../../error/GraphQLError';
 import { type ASTVisitor } from '../../language/visitor';
 
-export function undefinedVarMessage(varName: string, opName: ?string): string {
-  return opName
-    ? `Variable "$${varName}" is not defined by operation "${opName}".`
-    : `Variable "$${varName}" is not defined.`;
-}
+import { type ValidationContext } from '../ValidationContext';
 
 /**
  * No undefined variables
@@ -32,10 +27,9 @@ export function NoUndefinedVariables(context: ValidationContext): ASTVisitor {
           if (variableNameDefined[varName] !== true) {
             context.reportError(
               new GraphQLError(
-                undefinedVarMessage(
-                  varName,
-                  operation.name && operation.name.value,
-                ),
+                operation.name
+                  ? `Variable "$${varName}" is not defined by operation "${operation.name.value}".`
+                  : `Variable "$${varName}" is not defined.`,
                 [node, operation],
               ),
             );

@@ -1,17 +1,14 @@
 // @flow strict
 
-import { describe, it } from 'mocha';
 import { expect } from 'chai';
-import {
-  graphqlSync,
-  GraphQLSchema,
-  GraphQLEnumType,
-  GraphQLObjectType,
-  GraphQLInt,
-  GraphQLString,
-  GraphQLBoolean,
-  introspectionFromSchema,
-} from '../../';
+import { describe, it } from 'mocha';
+
+import { graphqlSync } from '../../graphql';
+import { introspectionFromSchema } from '../../utilities/introspectionFromSchema';
+
+import { GraphQLSchema } from '../schema';
+import { GraphQLEnumType, GraphQLObjectType } from '../definition';
+import { GraphQLInt, GraphQLString, GraphQLBoolean } from '../scalars';
 
 const ColorType = new GraphQLEnumType({
   name: 'Color',
@@ -22,7 +19,7 @@ const ColorType = new GraphQLEnumType({
   },
 });
 
-const Complex1 = { someRandomFunction: () => {} };
+const Complex1 = { someRandomFunction: () => null };
 const Complex2 = { someRandomValue: 123 };
 
 const ComplexEnum = new GraphQLEnumType({
@@ -43,7 +40,7 @@ const QueryType = new GraphQLObjectType({
         fromInt: { type: GraphQLInt },
         fromString: { type: GraphQLString },
       },
-      resolve(value, { fromEnum, fromInt, fromString }) {
+      resolve(_source, { fromEnum, fromInt, fromString }) {
         return fromInt !== undefined
           ? fromInt
           : fromString !== undefined
@@ -57,7 +54,7 @@ const QueryType = new GraphQLObjectType({
         fromEnum: { type: ColorType },
         fromInt: { type: GraphQLInt },
       },
-      resolve(value, { fromEnum, fromInt }) {
+      resolve(_source, { fromEnum, fromInt }) {
         return fromInt !== undefined ? fromInt : fromEnum;
       },
     },
@@ -73,7 +70,7 @@ const QueryType = new GraphQLObjectType({
         provideGoodValue: { type: GraphQLBoolean },
         provideBadValue: { type: GraphQLBoolean },
       },
-      resolve(value, { fromEnum, provideGoodValue, provideBadValue }) {
+      resolve(_source, { fromEnum, provideGoodValue, provideBadValue }) {
         if (provideGoodValue) {
           // Note: this is one of the references of the internal values which
           // ComplexEnum allows.
@@ -96,9 +93,7 @@ const MutationType = new GraphQLObjectType({
     favoriteEnum: {
       type: ColorType,
       args: { color: { type: ColorType } },
-      resolve(value, { color }) {
-        return color;
-      },
+      resolve: (_source, { color }) => color,
     },
   },
 });
@@ -109,9 +104,7 @@ const SubscriptionType = new GraphQLObjectType({
     subscribeToEnum: {
       type: ColorType,
       args: { color: { type: ColorType } },
-      resolve(value, { color }) {
-        return color;
-      },
+      resolve: (_source, { color }) => color,
     },
   },
 });
@@ -158,7 +151,7 @@ describe('Type System: Enum Values', () => {
       errors: [
         {
           message:
-            'Expected type Color, found "GREEN". Did you mean the enum value GREEN?',
+            'Expected value of type "Color", found "GREEN". Did you mean the enum value "GREEN"?',
           locations: [{ line: 1, column: 23 }],
         },
       ],
@@ -172,7 +165,7 @@ describe('Type System: Enum Values', () => {
       errors: [
         {
           message:
-            'Expected type Color, found GREENISH. Did you mean the enum value GREEN?',
+            'Expected value of type "Color", found GREENISH. Did you mean the enum value "GREEN"?',
           locations: [{ line: 1, column: 23 }],
         },
       ],
@@ -186,7 +179,7 @@ describe('Type System: Enum Values', () => {
       errors: [
         {
           message:
-            'Expected type Color, found green. Did you mean the enum value GREEN?',
+            'Expected value of type "Color", found green. Did you mean the enum value "GREEN"?',
           locations: [{ line: 1, column: 23 }],
         },
       ],
@@ -214,7 +207,7 @@ describe('Type System: Enum Values', () => {
     expect(result).to.deep.equal({
       errors: [
         {
-          message: 'Expected type Color, found 1.',
+          message: 'Expected value of type "Color", found 1.',
           locations: [{ line: 1, column: 23 }],
         },
       ],
@@ -227,7 +220,7 @@ describe('Type System: Enum Values', () => {
     expect(result).to.deep.equal({
       errors: [
         {
-          message: 'Expected type Int, found GREEN.',
+          message: 'Int cannot represent non-integer value: GREEN',
           locations: [{ line: 1, column: 22 }],
         },
       ],
@@ -270,7 +263,7 @@ describe('Type System: Enum Values', () => {
       errors: [
         {
           message:
-            'Variable "$color" got invalid value 2; Expected type Color.',
+            'Variable "$color" got invalid value 2; Expected type "Color".',
           locations: [{ line: 1, column: 8 }],
         },
       ],
@@ -286,7 +279,10 @@ describe('Type System: Enum Values', () => {
         {
           message:
             'Variable "$color" of type "String!" used in position expecting type "Color".',
-          locations: [{ line: 1, column: 8 }, { line: 1, column: 47 }],
+          locations: [
+            { line: 1, column: 8 },
+            { line: 1, column: 47 },
+          ],
         },
       ],
     });
@@ -301,7 +297,10 @@ describe('Type System: Enum Values', () => {
         {
           message:
             'Variable "$color" of type "Int!" used in position expecting type "Color".',
-          locations: [{ line: 1, column: 8 }, { line: 1, column: 44 }],
+          locations: [
+            { line: 1, column: 8 },
+            { line: 1, column: 44 },
+          ],
         },
       ],
     });
@@ -344,18 +343,20 @@ describe('Type System: Enum Values', () => {
     expect(values).to.have.deep.ordered.members([
       {
         name: 'ONE',
-        value: Complex1,
         description: undefined,
+        value: Complex1,
         isDeprecated: false,
         deprecationReason: undefined,
+        extensions: undefined,
         astNode: undefined,
       },
       {
         name: 'TWO',
-        value: Complex2,
         description: undefined,
+        value: Complex2,
         isDeprecated: false,
         deprecationReason: undefined,
+        extensions: undefined,
         astNode: undefined,
       },
     ]);

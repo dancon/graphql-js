@@ -3,12 +3,17 @@
 import { forEach, isCollection } from 'iterall';
 
 import objectValues from '../polyfills/objectValues';
+
 import inspect from '../jsutils/inspect';
+import invariant from '../jsutils/invariant';
 import isNullish from '../jsutils/isNullish';
 import isInvalid from '../jsutils/isInvalid';
 import isObjectLike from '../jsutils/isObjectLike';
-import { type ValueNode } from '../language/ast';
+
 import { Kind } from '../language/kinds';
+import { type ValueNode } from '../language/ast';
+
+import { GraphQLID } from '../type/scalars';
 import {
   type GraphQLInputType,
   isLeafType,
@@ -17,10 +22,13 @@ import {
   isListType,
   isNonNullType,
 } from '../type/definition';
-import { GraphQLID } from '../type/scalars';
 
 /**
- * Produces a GraphQL Value AST given a JavaScript value.
+ * Produces a GraphQL Value AST given a JavaScript object.
+ * Function will match JavaScript/JSON values to GraphQL AST schema format
+ * by using suggested GraphQLInputType. For example:
+ *
+ *     astFromValue("value", GraphQLString)
  *
  * A GraphQL type must be provided, which will be used to interpret different
  * JavaScript values.
@@ -130,12 +138,11 @@ export function astFromValue(value: mixed, type: GraphQLInputType): ?ValueNode {
       };
     }
 
-    throw new TypeError(`Cannot convert value to AST: ${inspect(serialized)}`);
+    throw new TypeError(`Cannot convert value to AST: ${inspect(serialized)}.`);
   }
 
   // Not reachable. All possible input types have been considered.
-  /* istanbul ignore next */
-  throw new Error(`Unexpected input type: "${inspect((type: empty))}".`);
+  invariant(false, 'Unexpected input type: ' + inspect((type: empty)));
 }
 
 /**

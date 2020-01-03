@@ -1,7 +1,8 @@
 // @flow strict
 
-import { describe, it } from 'mocha';
 import { expect } from 'chai';
+import { describe, it } from 'mocha';
+
 import { assertValidName } from '../assertValidName';
 
 describe('assertValidName()', () => {
@@ -13,7 +14,7 @@ describe('assertValidName()', () => {
 
   it('throws for non-strings', () => {
     // $DisableFlowOnNegativeTest
-    expect(() => assertValidName({})).to.throw(/Expected string/);
+    expect(() => assertValidName({})).to.throw('Expected name to be a string.');
   });
 
   it('throws for names with invalid characters', () => {

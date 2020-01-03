@@ -1,11 +1,13 @@
 // @flow strict
 
-import { type ValidationContext } from '../ValidationContext';
-import { GraphQLError } from '../../error/GraphQLError';
-import suggestionList from '../../jsutils/suggestionList';
 import didYouMean from '../../jsutils/didYouMean';
+import suggestionList from '../../jsutils/suggestionList';
+
+import { GraphQLError } from '../../error/GraphQLError';
+
 import { type FieldNode } from '../../language/ast';
 import { type ASTVisitor } from '../../language/visitor';
+
 import { type GraphQLSchema } from '../../type/schema';
 import {
   type GraphQLOutputType,
@@ -14,20 +16,7 @@ import {
   isAbstractType,
 } from '../../type/definition';
 
-export function undefinedFieldMessage(
-  fieldName: string,
-  type: string,
-  suggestedTypeNames: Array<string>,
-  suggestedFieldNames: Array<string>,
-): string {
-  const quotedTypeNames = suggestedTypeNames.map(x => `"${x}"`);
-  const quotedFieldNames = suggestedFieldNames.map(x => `"${x}"`);
-  return (
-    `Cannot query field "${fieldName}" on type "${type}".` +
-    (didYouMean('to use an inline fragment on', quotedTypeNames) ||
-      didYouMean(quotedFieldNames))
-  );
-}
+import { type ValidationContext } from '../ValidationContext';
 
 /**
  * Fields on correct type
@@ -60,12 +49,11 @@ export function FieldsOnCorrectType(context: ValidationContext): ASTVisitor {
           // Report an error, including helpful suggestions.
           context.reportError(
             new GraphQLError(
-              undefinedFieldMessage(
-                fieldName,
-                type.name,
-                suggestedTypeNames,
-                suggestedFieldNames,
-              ),
+              `Cannot query field "${fieldName}" on type "${type.name}".` +
+                (didYouMean(
+                  'to use an inline fragment on',
+                  suggestedTypeNames,
+                ) || didYouMean(suggestedFieldNames)),
               node,
             ),
           );
@@ -122,7 +110,7 @@ function getSuggestedTypeNames(
  * that may be the result of a typo.
  */
 function getSuggestedFieldNames(
-  schema: GraphQLSchema,
+  _schema: GraphQLSchema,
   type: GraphQLOutputType,
   fieldName: string,
 ): Array<string> {

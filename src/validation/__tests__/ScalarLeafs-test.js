@@ -1,12 +1,10 @@
 // @flow strict
 
 import { describe, it } from 'mocha';
+
+import { ScalarLeafs } from '../rules/ScalarLeafs';
+
 import { expectValidationErrors } from './harness';
-import {
-  ScalarLeafs,
-  noSubselectionAllowedMessage,
-  requiredSubselectionMessage,
-} from '../rules/ScalarLeafs';
 
 function expectErrors(queryStr) {
   return expectValidationErrors(ScalarLeafs, queryStr);
@@ -14,20 +12,6 @@ function expectErrors(queryStr) {
 
 function expectValid(queryStr) {
   expectErrors(queryStr).to.deep.equal([]);
-}
-
-function noScalarSubselection(field, type, line, column) {
-  return {
-    message: noSubselectionAllowedMessage(field, type),
-    locations: [{ line, column }],
-  };
-}
-
-function missingObjSubselection(field, type, line, column) {
-  return {
-    message: requiredSubselectionMessage(field, type),
-    locations: [{ line, column }],
-  };
 }
 
 describe('Validate: Scalar leafs', () => {
@@ -44,7 +28,13 @@ describe('Validate: Scalar leafs', () => {
       query directQueryOnObjectWithoutSubFields {
         human
       }
-    `).to.deep.equal([missingObjSubselection('human', 'Human', 3, 9)]);
+    `).to.deep.equal([
+      {
+        message:
+          'Field "human" of type "Human" must have a selection of subfields. Did you mean "human { ... }"?',
+        locations: [{ line: 3, column: 9 }],
+      },
+    ]);
   });
 
   it('interface type missing selection', () => {
@@ -52,7 +42,13 @@ describe('Validate: Scalar leafs', () => {
       {
         human { pets }
       }
-    `).to.deep.equal([missingObjSubselection('pets', '[Pet]', 3, 17)]);
+    `).to.deep.equal([
+      {
+        message:
+          'Field "pets" of type "[Pet]" must have a selection of subfields. Did you mean "pets { ... }"?',
+        locations: [{ line: 3, column: 17 }],
+      },
+    ]);
   });
 
   it('valid scalar selection with args', () => {
@@ -68,15 +64,27 @@ describe('Validate: Scalar leafs', () => {
       fragment scalarSelectionsNotAllowedOnBoolean on Dog {
         barks { sinceWhen }
       }
-    `).to.deep.equal([noScalarSubselection('barks', 'Boolean', 3, 15)]);
+    `).to.deep.equal([
+      {
+        message:
+          'Field "barks" must not have a selection since type "Boolean" has no subfields.',
+        locations: [{ line: 3, column: 15 }],
+      },
+    ]);
   });
 
   it('scalar selection not allowed on Enum', () => {
     expectErrors(`
       fragment scalarSelectionsNotAllowedOnEnum on Cat {
-        furColor { inHexdec }
+        furColor { inHexDec }
       }
-    `).to.deep.equal([noScalarSubselection('furColor', 'FurColor', 3, 18)]);
+    `).to.deep.equal([
+      {
+        message:
+          'Field "furColor" must not have a selection since type "FurColor" has no subfields.',
+        locations: [{ line: 3, column: 18 }],
+      },
+    ]);
   });
 
   it('scalar selection not allowed with args', () => {
@@ -85,7 +93,11 @@ describe('Validate: Scalar leafs', () => {
         doesKnowCommand(dogCommand: SIT) { sinceWhen }
       }
     `).to.deep.equal([
-      noScalarSubselection('doesKnowCommand', 'Boolean', 3, 42),
+      {
+        message:
+          'Field "doesKnowCommand" must not have a selection since type "Boolean" has no subfields.',
+        locations: [{ line: 3, column: 42 }],
+      },
     ]);
   });
 
@@ -94,7 +106,13 @@ describe('Validate: Scalar leafs', () => {
       fragment scalarSelectionsNotAllowedWithDirectives on Dog {
         name @include(if: true) { isAlsoHumanName }
       }
-    `).to.deep.equal([noScalarSubselection('name', 'String', 3, 33)]);
+    `).to.deep.equal([
+      {
+        message:
+          'Field "name" must not have a selection since type "String" has no subfields.',
+        locations: [{ line: 3, column: 33 }],
+      },
+    ]);
   });
 
   it('Scalar selection not allowed with directives and args', () => {
@@ -103,7 +121,11 @@ describe('Validate: Scalar leafs', () => {
         doesKnowCommand(dogCommand: SIT) @include(if: true) { sinceWhen }
       }
     `).to.deep.equal([
-      noScalarSubselection('doesKnowCommand', 'Boolean', 3, 61),
+      {
+        message:
+          'Field "doesKnowCommand" must not have a selection since type "Boolean" has no subfields.',
+        locations: [{ line: 3, column: 61 }],
+      },
     ]);
   });
 });

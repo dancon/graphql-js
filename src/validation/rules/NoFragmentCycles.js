@@ -1,17 +1,11 @@
 // @flow strict
 
-import { type ASTValidationContext } from '../ValidationContext';
 import { GraphQLError } from '../../error/GraphQLError';
-import { type FragmentDefinitionNode } from '../../language/ast';
-import { type ASTVisitor } from '../../language/visitor';
 
-export function cycleErrorMessage(
-  fragName: string,
-  spreadNames: Array<string>,
-): string {
-  const via = spreadNames.length ? ' via ' + spreadNames.join(', ') : '';
-  return `Cannot spread fragment "${fragName}" within itself${via}.`;
-}
+import { type ASTVisitor } from '../../language/visitor';
+import { type FragmentDefinitionNode } from '../../language/ast';
+
+import { type ASTValidationContext } from '../ValidationContext';
 
 export function NoFragmentCycles(context: ASTValidationContext): ASTVisitor {
   // Tracks already visited fragments to maintain O(N) and to ensure that cycles
@@ -62,10 +56,15 @@ export function NoFragmentCycles(context: ASTValidationContext): ASTVisitor {
         }
       } else {
         const cyclePath = spreadPath.slice(cycleIndex);
-        const fragmentNames = cyclePath.slice(0, -1).map(s => s.name.value);
+        const viaPath = cyclePath
+          .slice(0, -1)
+          .map(s => '"' + s.name.value + '"')
+          .join(', ');
+
         context.reportError(
           new GraphQLError(
-            cycleErrorMessage(spreadName, fragmentNames),
+            `Cannot spread fragment "${spreadName}" within itself` +
+              (viaPath !== '' ? ` via ${viaPath}.` : '.'),
             cyclePath,
           ),
         );

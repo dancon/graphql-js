@@ -2,11 +2,13 @@
 
 import didYouMean from '../../jsutils/didYouMean';
 import suggestionList from '../../jsutils/suggestionList';
-import { type SDLValidationContext } from '../ValidationContext';
+
 import { GraphQLError } from '../../error/GraphQLError';
+
 import { Kind } from '../../language/kinds';
-import { isTypeDefinitionNode } from '../../language/predicates';
 import { type ASTVisitor } from '../../language/visitor';
+import { isTypeDefinitionNode } from '../../language/predicates';
+
 import {
   isScalarType,
   isObjectType,
@@ -16,22 +18,7 @@ import {
   isInputObjectType,
 } from '../../type/definition';
 
-export function extendingUnknownTypeMessage(
-  typeName: string,
-  suggestedTypes: Array<string>,
-): string {
-  return (
-    `Cannot extend type "${typeName}" because it is not defined.` +
-    didYouMean(suggestedTypes.map(x => `"${x}"`))
-  );
-}
-
-export function extendingDifferentTypeKindMessage(
-  typeName: string,
-  kind: string,
-): string {
-  return `Cannot extend non-${kind} type "${typeName}".`;
-}
+import { type SDLValidationContext } from '../ValidationContext';
 
 /**
  * Possible type extension
@@ -64,29 +51,20 @@ export function PossibleTypeExtensions(
     const defNode = definedTypes[typeName];
     const existingType = schema && schema.getType(typeName);
 
+    let expectedKind;
     if (defNode) {
-      const expectedKind = defKindToExtKind[defNode.kind];
-      if (expectedKind !== node.kind) {
-        context.reportError(
-          new GraphQLError(
-            extendingDifferentTypeKindMessage(
-              typeName,
-              extensionKindToTypeName(expectedKind),
-            ),
-            [defNode, node],
-          ),
-        );
-      }
+      expectedKind = defKindToExtKind[defNode.kind];
     } else if (existingType) {
-      const expectedKind = typeToExtKind(existingType);
+      expectedKind = typeToExtKind(existingType);
+    }
+
+    if (expectedKind) {
       if (expectedKind !== node.kind) {
+        const kindStr = extensionKindToTypeName(node.kind);
         context.reportError(
           new GraphQLError(
-            extendingDifferentTypeKindMessage(
-              typeName,
-              extensionKindToTypeName(expectedKind),
-            ),
-            node,
+            `Cannot extend non-${kindStr} type "${typeName}".`,
+            defNode ? [defNode, node] : node,
           ),
         );
       }
@@ -99,7 +77,8 @@ export function PossibleTypeExtensions(
       const suggestedTypes = suggestionList(typeName, allTypeNames);
       context.reportError(
         new GraphQLError(
-          extendingUnknownTypeMessage(typeName, suggestedTypes),
+          `Cannot extend type "${typeName}" because it is not defined.` +
+            didYouMean(suggestedTypes),
           node.name,
         ),
       );

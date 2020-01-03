@@ -2,12 +2,13 @@
 
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
+
 import { version, versionInfo } from '../version';
 
 describe('Version', () => {
   it('version', () => {
     expect(version).to.be.a('string');
-    expect(version).to.match(/^\d+\.\d+\.\d(-rc.\d+)?$/);
+    expect(version).to.match(/^\d+\.\d+\.\d(-(alpha|beta|rc)\.\d+)?$/);
   });
 
   it('versionInfo', () => {

@@ -4,10 +4,52 @@ import { expect } from 'chai';
 import { describe, it } from 'mocha';
 
 import dedent from '../../jsutils/dedent';
-import { Source } from '../../language';
+
+import { Source } from '../source';
 import { printSourceLocation } from '../printLocation';
 
-describe('printLocation', () => {
+describe('printSourceLocation', () => {
+  it('prints minified documents', () => {
+    const minifiedSource = new Source(
+      'query SomeMinifiedQueryWithErrorInside($foo:String!=FIRST_ERROR_HERE$bar:String){someField(foo:$foo bar:$bar baz:SECOND_ERROR_HERE){fieldA fieldB{fieldC fieldD...on THIRD_ERROR_HERE}}}',
+    );
+
+    const firstLocation = printSourceLocation(minifiedSource, {
+      line: 1,
+      column: minifiedSource.body.indexOf('FIRST_ERROR_HERE') + 1,
+    });
+    expect(firstLocation + '\n').to.equal(dedent`
+      GraphQL request:1:53
+      1 | query SomeMinifiedQueryWithErrorInside($foo:String!=FIRST_ERROR_HERE$bar:String)
+        |                                                     ^
+        | {someField(foo:$foo bar:$bar baz:SECOND_ERROR_HERE){fieldA fieldB{fieldC fieldD.
+    `);
+
+    const secondLocation = printSourceLocation(minifiedSource, {
+      line: 1,
+      column: minifiedSource.body.indexOf('SECOND_ERROR_HERE') + 1,
+    });
+    expect(secondLocation + '\n').to.equal(dedent`
+      GraphQL request:1:114
+      1 | query SomeMinifiedQueryWithErrorInside($foo:String!=FIRST_ERROR_HERE$bar:String)
+        | {someField(foo:$foo bar:$bar baz:SECOND_ERROR_HERE){fieldA fieldB{fieldC fieldD.
+        |                                  ^
+        | ..on THIRD_ERROR_HERE}}}
+    `);
+
+    const thirdLocation = printSourceLocation(minifiedSource, {
+      line: 1,
+      column: minifiedSource.body.indexOf('THIRD_ERROR_HERE') + 1,
+    });
+    expect(thirdLocation + '\n').to.equal(dedent`
+      GraphQL request:1:166
+      1 | query SomeMinifiedQueryWithErrorInside($foo:String!=FIRST_ERROR_HERE$bar:String)
+        | {someField(foo:$foo bar:$bar baz:SECOND_ERROR_HERE){fieldA fieldB{fieldC fieldD.
+        | ..on THIRD_ERROR_HERE}}}
+        |      ^
+    `);
+  });
+
   it('prints single digit line number with no padding', () => {
     const result = printSourceLocation(
       new Source('*', 'Test', { line: 9, column: 1 }),
@@ -16,8 +58,8 @@ describe('printLocation', () => {
 
     expect(result + '\n').to.equal(dedent`
       Test:9:1
-      9: *
-         ^
+      9 | *
+        | ^
     `);
   });
 
@@ -29,9 +71,9 @@ describe('printLocation', () => {
 
     expect(result + '\n').to.equal(dedent`
       Test:9:1
-       9: *
-          ^
-      10: 
+       9 | *
+         | ^
+      10 |
     `);
   });
 });

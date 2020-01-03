@@ -1,16 +1,9 @@
 // @flow strict
 
-import { type SDLValidationContext } from '../ValidationContext';
 import { GraphQLError } from '../../error/GraphQLError';
 import { type ASTVisitor } from '../../language/visitor';
 
-export function duplicateOperationTypeMessage(operation: string): string {
-  return `There can be only one ${operation} type in schema.`;
-}
-
-export function existedOperationTypeMessage(operation: string): string {
-  return `Type for ${operation} already defined in the schema. It cannot be redefined.`;
-}
+import { type SDLValidationContext } from '../ValidationContext';
 
 /**
  * Unique operation types
@@ -44,16 +37,16 @@ export function UniqueOperationTypes(
         if (existingOperationTypes[operation]) {
           context.reportError(
             new GraphQLError(
-              existedOperationTypeMessage(operation),
+              `Type for ${operation} already defined in the schema. It cannot be redefined.`,
               operationType,
             ),
           );
         } else if (alreadyDefinedOperationType) {
           context.reportError(
-            new GraphQLError(duplicateOperationTypeMessage(operation), [
-              alreadyDefinedOperationType,
-              operationType,
-            ]),
+            new GraphQLError(
+              `There can be only one ${operation} type in schema.`,
+              [alreadyDefinedOperationType, operationType],
+            ),
           );
         } else {
           definedOperationTypes[operation] = operationType;

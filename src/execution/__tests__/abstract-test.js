@@ -2,16 +2,17 @@
 
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
+
+import { GraphQLSchema } from '../../type/schema';
+import { GraphQLString, GraphQLBoolean } from '../../type/scalars';
 import {
-  graphqlSync,
-  GraphQLSchema,
+  GraphQLList,
   GraphQLObjectType,
   GraphQLInterfaceType,
   GraphQLUnionType,
-  GraphQLList,
-  GraphQLString,
-  GraphQLBoolean,
-} from '../../';
+} from '../../type/definition';
+
+import { graphqlSync } from '../../graphql';
 
 class Dog {
   name: string;
@@ -85,19 +86,21 @@ describe('Execute: Handles execution of abstract types', () => {
       types: [CatType, DogType],
     });
 
-    const query = `{
-      pets {
-        name
-        ... on Dog {
-          woofs
-        }
-        ... on Cat {
-          meows
+    const query = `
+      {
+        pets {
+          name
+          ... on Dog {
+            woofs
+          }
+          ... on Cat {
+            meows
+          }
         }
       }
-    }`;
+    `;
 
-    const result = graphqlSync(schema, query);
+    const result = graphqlSync({ schema, source: query });
 
     expect(result).to.deep.equal({
       data: {
@@ -166,7 +169,7 @@ describe('Execute: Handles execution of abstract types', () => {
       }
     }`;
 
-    const result = graphqlSync(schema, query);
+    const result = graphqlSync({ schema, source: query });
 
     expect(result).to.deep.equal({
       data: {
@@ -245,19 +248,21 @@ describe('Execute: Handles execution of abstract types', () => {
       types: [CatType, DogType],
     });
 
-    const query = `{
-      pets {
-        name
-        ... on Dog {
-          woofs
-        }
-        ... on Cat {
-          meows
+    const query = `
+      {
+        pets {
+          name
+          ... on Dog {
+            woofs
+          }
+          ... on Cat {
+            meows
+          }
         }
       }
-    }`;
+    `;
 
-    const result = graphqlSync(schema, query);
+    const result = graphqlSync({ schema, source: query });
 
     expect(result).to.deep.equal({
       data: {
@@ -277,7 +282,7 @@ describe('Execute: Handles execution of abstract types', () => {
         {
           message:
             'Runtime Object type "Human" is not a possible type for "Pet".',
-          locations: [{ line: 2, column: 7 }],
+          locations: [{ line: 3, column: 9 }],
           path: ['pets', 2],
         },
       ],
@@ -340,20 +345,22 @@ describe('Execute: Handles execution of abstract types', () => {
       }),
     });
 
-    const query = `{
-      pets {
-        ... on Dog {
-          name
-          woofs
-        }
-        ... on Cat {
-          name
-          meows
+    const query = `
+      {
+        pets {
+          ... on Dog {
+            name
+            woofs
+          }
+          ... on Cat {
+            name
+            meows
+          }
         }
       }
-    }`;
+    `;
 
-    const result = graphqlSync(schema, query);
+    const result = graphqlSync({ schema, source: query });
 
     expect(result).to.deep.equal({
       data: {
@@ -373,7 +380,7 @@ describe('Execute: Handles execution of abstract types', () => {
         {
           message:
             'Runtime Object type "Human" is not a possible type for "Pet".',
-          locations: [{ line: 2, column: 7 }],
+          locations: [{ line: 3, column: 9 }],
           path: ['pets', 2],
         },
       ],
@@ -409,14 +416,14 @@ describe('Execute: Handles execution of abstract types', () => {
       types: [fooObject],
     });
 
-    const result = graphqlSync(schema, '{ foo { bar } }');
+    const result = graphqlSync({ schema, source: '{ foo { bar } }' });
 
     expect(result).to.deep.equal({
       data: { foo: null },
       errors: [
         {
           message:
-            'Abstract type FooInterface must resolve to an Object type at runtime for field Query.foo with value "dummy", received "[]". Either the FooInterface type should provide a "resolveType" function or each possible type should provide an "isTypeOf" function.',
+            'Abstract type "FooInterface" must resolve to an Object type at runtime for field "Query.foo" with value "dummy", received "[]". Either the "FooInterface" type should provide a "resolveType" function or each possible type should provide an "isTypeOf" function.',
           locations: [{ line: 1, column: 3 }],
           path: ['foo'],
         },
@@ -468,19 +475,21 @@ describe('Execute: Handles execution of abstract types', () => {
       types: [CatType, DogType],
     });
 
-    const query = `{
-      pets {
-        name
-        ... on Dog {
-          woofs
-        }
-        ... on Cat {
-          meows
+    const query = `
+      {
+        pets {
+          name
+          ... on Dog {
+            woofs
+          }
+          ... on Cat {
+            meows
+          }
         }
       }
-    }`;
+    `;
 
-    const result = graphqlSync(schema, query);
+    const result = graphqlSync({ schema, source: query });
 
     expect(result).to.deep.equal({
       data: {

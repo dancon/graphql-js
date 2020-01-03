@@ -1,20 +1,24 @@
 // @flow strict
 
-import { describe, it } from 'mocha';
 import { expect } from 'chai';
-import { valueFromAST } from '../valueFromAST';
+import { describe, it } from 'mocha';
+
+import { parseValue } from '../../language/parser';
 import {
-  GraphQLEnumType,
-  GraphQLInputObjectType,
-  GraphQLList,
   GraphQLInt,
   GraphQLFloat,
   GraphQLString,
   GraphQLBoolean,
   GraphQLID,
+} from '../../type/scalars';
+import {
+  GraphQLEnumType,
+  GraphQLInputObjectType,
+  GraphQLList,
   GraphQLNonNull,
-} from '../../type';
-import { parseValue } from '../../language';
+} from '../../type/definition';
+
+import { valueFromAST } from '../valueFromAST';
 
 describe('valueFromAST', () => {
   function testCase(type, valueText, expected) {
@@ -60,8 +64,8 @@ describe('valueFromAST', () => {
       GREEN: { value: 2 },
       BLUE: { value: 3 },
       NULL: { value: null },
-      UNDEFINED: { value: undefined },
       NAN: { value: NaN },
+      NO_CUSTOM_VALUE: { value: undefined },
     },
   });
 
@@ -72,8 +76,8 @@ describe('valueFromAST', () => {
     testCase(testEnum, '"BLUE"', undefined);
     testCase(testEnum, 'null', null);
     testCase(testEnum, 'NULL', null);
-    testCase(testEnum, 'UNDEFINED', undefined);
     testCase(testEnum, 'NAN', NaN);
+    testCase(testEnum, 'NO_CUSTOM_VALUE', 'NO_CUSTOM_VALUE');
   });
 
   // Boolean!

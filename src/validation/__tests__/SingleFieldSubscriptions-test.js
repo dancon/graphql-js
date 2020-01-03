@@ -1,11 +1,10 @@
 // @flow strict
 
 import { describe, it } from 'mocha';
+
+import { SingleFieldSubscriptions } from '../rules/SingleFieldSubscriptions';
+
 import { expectValidationErrors } from './harness';
-import {
-  SingleFieldSubscriptions,
-  singleFieldOnlyMessage,
-} from '../rules/SingleFieldSubscriptions';
 
 function expectErrors(queryStr) {
   return expectValidationErrors(SingleFieldSubscriptions, queryStr);
@@ -32,7 +31,8 @@ describe('Validate: Subscriptions with single field', () => {
       }
     `).to.deep.equal([
       {
-        message: singleFieldOnlyMessage('ImportantEmails'),
+        message:
+          'Subscription "ImportantEmails" must select only one top level field.',
         locations: [{ line: 4, column: 9 }],
       },
     ]);
@@ -46,7 +46,8 @@ describe('Validate: Subscriptions with single field', () => {
       }
     `).to.deep.equal([
       {
-        message: singleFieldOnlyMessage('ImportantEmails'),
+        message:
+          'Subscription "ImportantEmails" must select only one top level field.',
         locations: [{ line: 4, column: 9 }],
       },
     ]);
@@ -61,8 +62,12 @@ describe('Validate: Subscriptions with single field', () => {
       }
     `).to.deep.equal([
       {
-        message: singleFieldOnlyMessage('ImportantEmails'),
-        locations: [{ line: 4, column: 9 }, { line: 5, column: 9 }],
+        message:
+          'Subscription "ImportantEmails" must select only one top level field.',
+        locations: [
+          { line: 4, column: 9 },
+          { line: 5, column: 9 },
+        ],
       },
     ]);
   });
@@ -75,7 +80,7 @@ describe('Validate: Subscriptions with single field', () => {
       }
     `).to.deep.equal([
       {
-        message: singleFieldOnlyMessage(null),
+        message: 'Anonymous Subscription must select only one top level field.',
         locations: [{ line: 4, column: 9 }],
       },
     ]);

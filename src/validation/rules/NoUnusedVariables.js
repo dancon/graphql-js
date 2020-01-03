@@ -1,17 +1,9 @@
 // @flow strict
 
-import { type ValidationContext } from '../ValidationContext';
 import { GraphQLError } from '../../error/GraphQLError';
 import { type ASTVisitor } from '../../language/visitor';
 
-export function unusedVariableMessage(
-  varName: string,
-  opName: ?string,
-): string {
-  return opName
-    ? `Variable "$${varName}" is never used in operation "${opName}".`
-    : `Variable "$${varName}" is never used.`;
-}
+import { type ValidationContext } from '../ValidationContext';
 
 /**
  * No unused variables
@@ -30,7 +22,6 @@ export function NoUnusedVariables(context: ValidationContext): ASTVisitor {
       leave(operation) {
         const variableNameUsed = Object.create(null);
         const usages = context.getRecursiveVariableUsages(operation);
-        const opName = operation.name ? operation.name.value : null;
 
         for (const { node } of usages) {
           variableNameUsed[node.name.value] = true;
@@ -41,7 +32,9 @@ export function NoUnusedVariables(context: ValidationContext): ASTVisitor {
           if (variableNameUsed[variableName] !== true) {
             context.reportError(
               new GraphQLError(
-                unusedVariableMessage(variableName, opName),
+                operation.name
+                  ? `Variable "$${variableName}" is never used in operation "${operation.name.value}".`
+                  : `Variable "$${variableName}" is never used.`,
                 variableDef,
               ),
             );

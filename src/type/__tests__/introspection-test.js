@@ -3,22 +3,23 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 
-import { missingFieldArgMessage } from '../../validation/rules/ProvidedRequiredArguments';
-import {
-  graphqlSync,
-  GraphQLSchema,
-  GraphQLObjectType,
-  GraphQLList,
-  GraphQLInputObjectType,
-  GraphQLString,
-  GraphQLEnumType,
-} from '../../';
+import invariant from '../../jsutils/invariant';
 
-import { getIntrospectionQuery } from '../../utilities/introspectionQuery';
+import { graphqlSync } from '../../graphql';
+import { getIntrospectionQuery } from '../../utilities/getIntrospectionQuery';
+
+import { GraphQLSchema } from '../schema';
+import { GraphQLString } from '../scalars';
+import {
+  GraphQLList,
+  GraphQLObjectType,
+  GraphQLInputObjectType,
+  GraphQLEnumType,
+} from '../definition';
 
 describe('Introspection', () => {
   it('executes an introspection query', () => {
-    const EmptySchema = new GraphQLSchema({
+    const schema = new GraphQLSchema({
       query: new GraphQLObjectType({
         name: 'QueryRoot',
         fields: {
@@ -26,9 +27,9 @@ describe('Introspection', () => {
         },
       }),
     });
-    const query = getIntrospectionQuery({ descriptions: false });
-    const result = graphqlSync(EmptySchema, query);
+    const source = getIntrospectionQuery({ descriptions: false });
 
+    const result = graphqlSync({ schema, source });
     expect(result).to.deep.equal({
       data: {
         __schema: {
@@ -886,7 +887,7 @@ describe('Introspection', () => {
     });
 
     const schema = new GraphQLSchema({ query: TestType });
-    const request = `
+    const source = `
       {
         __type(name: "TestInputObject") {
           kind
@@ -917,7 +918,7 @@ describe('Introspection', () => {
       }
     `;
 
-    expect(graphqlSync(schema, request)).to.deep.equal({
+    expect(graphqlSync({ schema, source })).to.deep.equal({
       data: {
         __type: {
           kind: 'INPUT_OBJECT',
@@ -971,7 +972,7 @@ describe('Introspection', () => {
     });
 
     const schema = new GraphQLSchema({ query: TestType });
-    const request = `
+    const source = `
       {
         __type(name: "TestType") {
           name
@@ -979,7 +980,7 @@ describe('Introspection', () => {
       }
     `;
 
-    expect(graphqlSync(schema, request)).to.deep.equal({
+    expect(graphqlSync({ schema, source })).to.deep.equal({
       data: {
         __type: {
           name: 'TestType',
@@ -1003,7 +1004,7 @@ describe('Introspection', () => {
     });
 
     const schema = new GraphQLSchema({ query: TestType });
-    const request = `
+    const source = `
       {
         __type(name: "TestType") {
           name
@@ -1016,7 +1017,7 @@ describe('Introspection', () => {
       }
     `;
 
-    expect(graphqlSync(schema, request)).to.deep.equal({
+    expect(graphqlSync({ schema, source })).to.deep.equal({
       data: {
         __type: {
           name: 'TestType',
@@ -1052,7 +1053,7 @@ describe('Introspection', () => {
     });
 
     const schema = new GraphQLSchema({ query: TestType });
-    const request = `
+    const source = `
       {
         __type(name: "TestType") {
           name
@@ -1069,7 +1070,7 @@ describe('Introspection', () => {
       }
     `;
 
-    expect(graphqlSync(schema, request)).to.deep.equal({
+    expect(graphqlSync({ schema, source })).to.deep.equal({
       data: {
         __type: {
           name: 'TestType',
@@ -1100,9 +1101,9 @@ describe('Introspection', () => {
     const TestEnum = new GraphQLEnumType({
       name: 'TestEnum',
       values: {
-        NONDEPRECATED: { value: 0 },
+        NON_DEPRECATED: { value: 0 },
         DEPRECATED: { value: 1, deprecationReason: 'Removed in 1.0' },
-        ALSONONDEPRECATED: { value: 2 },
+        ALSO_NON_DEPRECATED: { value: 2 },
       },
     });
 
@@ -1116,7 +1117,7 @@ describe('Introspection', () => {
     });
 
     const schema = new GraphQLSchema({ query: TestType });
-    const request = `
+    const source = `
       {
         __type(name: "TestEnum") {
           name
@@ -1129,13 +1130,13 @@ describe('Introspection', () => {
       }
     `;
 
-    expect(graphqlSync(schema, request)).to.deep.equal({
+    expect(graphqlSync({ schema, source })).to.deep.equal({
       data: {
         __type: {
           name: 'TestEnum',
           enumValues: [
             {
-              name: 'NONDEPRECATED',
+              name: 'NON_DEPRECATED',
               isDeprecated: false,
               deprecationReason: null,
             },
@@ -1145,7 +1146,7 @@ describe('Introspection', () => {
               deprecationReason: 'Removed in 1.0',
             },
             {
-              name: 'ALSONONDEPRECATED',
+              name: 'ALSO_NON_DEPRECATED',
               isDeprecated: false,
               deprecationReason: null,
             },
@@ -1159,9 +1160,9 @@ describe('Introspection', () => {
     const TestEnum = new GraphQLEnumType({
       name: 'TestEnum',
       values: {
-        NONDEPRECATED: { value: 0 },
+        NON_DEPRECATED: { value: 0 },
         DEPRECATED: { value: 1, deprecationReason: 'Removed in 1.0' },
-        ALSONONDEPRECATED: { value: 2 },
+        ALSO_NON_DEPRECATED: { value: 2 },
       },
     });
 
@@ -1175,7 +1176,7 @@ describe('Introspection', () => {
     });
 
     const schema = new GraphQLSchema({ query: TestType });
-    const request = `
+    const source = `
       {
         __type(name: "TestEnum") {
           name
@@ -1192,35 +1193,35 @@ describe('Introspection', () => {
       }
     `;
 
-    expect(graphqlSync(schema, request)).to.deep.equal({
+    expect(graphqlSync({ schema, source })).to.deep.equal({
       data: {
         __type: {
           name: 'TestEnum',
           trueValues: [
             {
-              name: 'NONDEPRECATED',
+              name: 'NON_DEPRECATED',
             },
             {
               name: 'DEPRECATED',
             },
             {
-              name: 'ALSONONDEPRECATED',
+              name: 'ALSO_NON_DEPRECATED',
             },
           ],
           falseValues: [
             {
-              name: 'NONDEPRECATED',
+              name: 'NON_DEPRECATED',
             },
             {
-              name: 'ALSONONDEPRECATED',
+              name: 'ALSO_NON_DEPRECATED',
             },
           ],
           omittedValues: [
             {
-              name: 'NONDEPRECATED',
+              name: 'NON_DEPRECATED',
             },
             {
-              name: 'ALSONONDEPRECATED',
+              name: 'ALSO_NON_DEPRECATED',
             },
           ],
         },
@@ -1239,7 +1240,7 @@ describe('Introspection', () => {
     });
 
     const schema = new GraphQLSchema({ query: TestType });
-    const request = `
+    const source = `
       {
         __type {
           name
@@ -1247,10 +1248,11 @@ describe('Introspection', () => {
       }
     `;
 
-    expect(graphqlSync(schema, request)).to.deep.equal({
+    expect(graphqlSync({ schema, source })).to.deep.equal({
       errors: [
         {
-          message: missingFieldArgMessage('__type', 'name', 'String!'),
+          message:
+            'Field "__type" argument "name" of type "String!" is required, but it was not provided.',
           locations: [{ line: 3, column: 9 }],
         },
       ],
@@ -1266,7 +1268,7 @@ describe('Introspection', () => {
     });
 
     const schema = new GraphQLSchema({ query: QueryRoot });
-    const request = `
+    const source = `
       {
         schemaType: __type(name: "__Schema") {
           name,
@@ -1279,7 +1281,7 @@ describe('Introspection', () => {
       }
     `;
 
-    expect(graphqlSync(schema, request)).to.deep.equal({
+    expect(graphqlSync({ schema, source })).to.deep.equal({
       data: {
         schemaType: {
           name: '__Schema',
@@ -1323,7 +1325,7 @@ describe('Introspection', () => {
     });
 
     const schema = new GraphQLSchema({ query: QueryRoot });
-    const request = `
+    const source = `
       {
         typeKindType: __type(name: "__TypeKind") {
           name,
@@ -1336,7 +1338,7 @@ describe('Introspection', () => {
       }
     `;
 
-    expect(graphqlSync(schema, request)).to.deep.equal({
+    expect(graphqlSync({ schema, source })).to.deep.equal({
       data: {
         typeKindType: {
           name: '__TypeKind',
@@ -1354,7 +1356,7 @@ describe('Introspection', () => {
             },
             {
               description:
-                'Indicates this type is an interface. `fields` and `possibleTypes` are valid fields.',
+                'Indicates this type is an interface. `fields`, `interfaces`, and `possibleTypes` are valid fields.',
               name: 'INTERFACE',
             },
             {
@@ -1399,14 +1401,10 @@ describe('Introspection', () => {
     const schema = new GraphQLSchema({ query: QueryRoot });
     const source = getIntrospectionQuery();
 
-    const calledForFields = {};
-    /* istanbul ignore next */
-    function fieldResolver(value, _1, _2, info) {
-      calledForFields[`${info.parentType.name}::${info.fieldName}`] = true;
-      return value;
+    function fieldResolver(_1, _2, _3, info) {
+      invariant(false, `Called on ${info.parentType.name}::${info.fieldName}`);
     }
 
     graphqlSync({ schema, source, fieldResolver });
-    expect(calledForFields).to.deep.equal({});
   });
 });

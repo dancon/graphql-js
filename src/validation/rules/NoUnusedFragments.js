@@ -1,12 +1,9 @@
 // @flow strict
 
-import { type ASTValidationContext } from '../ValidationContext';
 import { GraphQLError } from '../../error/GraphQLError';
 import { type ASTVisitor } from '../../language/visitor';
 
-export function unusedFragMessage(fragName: string): string {
-  return `Fragment "${fragName}" is never used.`;
-}
+import { type ASTValidationContext } from '../ValidationContext';
 
 /**
  * No unused fragments
@@ -42,7 +39,10 @@ export function NoUnusedFragments(context: ASTValidationContext): ASTVisitor {
           const fragName = fragmentDef.name.value;
           if (fragmentNameUsed[fragName] !== true) {
             context.reportError(
-              new GraphQLError(unusedFragMessage(fragName), fragmentDef),
+              new GraphQLError(
+                `Fragment "${fragName}" is never used.`,
+                fragmentDef,
+              ),
             );
           }
         }

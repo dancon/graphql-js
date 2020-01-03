@@ -2,15 +2,16 @@
 
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
-import { execute } from '../execute';
-import { parse } from '../../language';
+
+import { parse } from '../../language/parser';
+
+import { GraphQLSchema } from '../../type/schema';
+import { GraphQLString } from '../../type/scalars';
+import { GraphQLNonNull, GraphQLObjectType } from '../../type/definition';
+
 import { buildSchema } from '../../utilities/buildASTSchema';
-import {
-  GraphQLSchema,
-  GraphQLObjectType,
-  GraphQLString,
-  GraphQLNonNull,
-} from '../../type';
+
+import { execute } from '../execute';
 
 const syncError = new Error('sync');
 const syncNonNullError = new Error('syncNonNull');
@@ -105,7 +106,7 @@ const schema = buildSchema(`
 `);
 
 function executeQuery(query, rootValue) {
-  return execute(schema, parse(query), rootValue);
+  return execute({ schema, document: parse(query), rootValue });
 }
 
 // avoids also doing any nests

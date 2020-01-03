@@ -4,30 +4,31 @@ import { inspect as nodeInspect } from 'util';
 
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
-import { Kind } from '../kinds';
-import { TokenKind } from '../tokenKind';
-import { parse, parseValue, parseType } from '../parser';
-import { Source } from '../source';
+
 import dedent from '../../jsutils/dedent';
 import inspect from '../../jsutils/inspect';
-import toJSONDeep from './toJSONDeep';
-import { kitchenSinkQuery } from '../../__fixtures__';
 
-function expectSyntaxError(text, message, location) {
-  expect(() => parse(text))
-    .to.throw(message)
-    .with.deep.property('locations', [location]);
+import { Kind } from '../kinds';
+import { Source } from '../source';
+import { TokenKind } from '../tokenKind';
+import { parse, parseValue, parseType } from '../parser';
+
+import { kitchenSinkQuery } from '../../__fixtures__';
+import toJSONDeep from './toJSONDeep';
+
+function expectSyntaxError(text) {
+  return expect(() => parse(text)).to.throw();
 }
 
 describe('Parser', () => {
   it('asserts that a source to parse was provided', () => {
     // $DisableFlowOnNegativeTest
-    expect(() => parse()).to.throw('Must provide Source. Received: undefined');
+    expect(() => parse()).to.throw('Must provide Source. Received: undefined.');
   });
 
   it('asserts that an invalid source to parse was provided', () => {
     // $DisableFlowOnNegativeTest
-    expect(() => parse({})).to.throw('Must provide Source. Received: {}');
+    expect(() => parse({})).to.throw('Must provide Source. Received: {}.');
   });
 
   it('parse provides useful errors', () => {
@@ -39,39 +40,46 @@ describe('Parser', () => {
     }
 
     expect(caughtError).to.deep.contain({
-      message: 'Syntax Error: Expected Name, found <EOF>',
+      message: 'Syntax Error: Expected Name, found <EOF>.',
       positions: [1],
       locations: [{ line: 1, column: 2 }],
     });
 
     expect(String(caughtError) + '\n').to.equal(dedent`
-      Syntax Error: Expected Name, found <EOF>
+      Syntax Error: Expected Name, found <EOF>.
 
       GraphQL request:1:2
-      1: {
-          ^
+      1 | {
+        |  ^
     `);
 
-    expectSyntaxError(
-      `
+    expectSyntaxError(`
       { ...MissingOn }
-      fragment MissingOn Type`,
-      'Expected "on", found Name "Type"',
-      { line: 3, column: 26 },
-    );
-
-    expectSyntaxError('{ field: {} }', 'Expected Name, found {', {
-      line: 1,
-      column: 10,
+      fragment MissingOn Type
+    `).to.deep.include({
+      message: 'Syntax Error: Expected "on", found Name "Type".',
+      locations: [{ line: 3, column: 26 }],
     });
 
-    expectSyntaxError(
-      'notanoperation Foo { field }',
-      'Unexpected Name "notanoperation"',
-      { line: 1, column: 1 },
-    );
+    expectSyntaxError('{ field: {} }').to.deep.include({
+      message: 'Syntax Error: Expected Name, found "{".',
+      locations: [{ line: 1, column: 10 }],
+    });
 
-    expectSyntaxError('...', 'Unexpected ...', { line: 1, column: 1 });
+    expectSyntaxError('notAnOperation Foo { field }').to.deep.include({
+      message: 'Syntax Error: Unexpected Name "notAnOperation".',
+      locations: [{ line: 1, column: 1 }],
+    });
+
+    expectSyntaxError('...').to.deep.include({
+      message: 'Syntax Error: Unexpected "...".',
+      locations: [{ line: 1, column: 1 }],
+    });
+
+    expectSyntaxError('{ ""').to.deep.include({
+      message: 'Syntax Error: Expected Name, found String "".',
+      locations: [{ line: 1, column: 3 }],
+    });
   });
 
   it('parse provides useful error when using source', () => {
@@ -82,11 +90,11 @@ describe('Parser', () => {
       caughtError = error;
     }
     expect(String(caughtError) + '\n').to.equal(dedent`
-      Syntax Error: Expected {, found <EOF>
+      Syntax Error: Expected "{", found <EOF>.
 
       MyQuery.graphql:1:6
-      1: query
-              ^
+      1 | query
+        |      ^
     `);
   });
 
@@ -99,9 +107,10 @@ describe('Parser', () => {
   it('parses constant default values', () => {
     expectSyntaxError(
       'query Foo($x: Complex = { a: { b: [ $var ] } }) { field }',
-      'Unexpected $',
-      { line: 1, column: 37 },
-    );
+    ).to.deep.equal({
+      message: 'Syntax Error: Unexpected "$".',
+      locations: [{ line: 1, column: 37 }],
+    });
   });
 
   it('parses variable definition directives', () => {
@@ -111,16 +120,16 @@ describe('Parser', () => {
   });
 
   it('does not accept fragments named "on"', () => {
-    expectSyntaxError('fragment on on on { on }', 'Unexpected Name "on"', {
-      line: 1,
-      column: 10,
+    expectSyntaxError('fragment on on on { on }').to.deep.equal({
+      message: 'Syntax Error: Unexpected Name "on".',
+      locations: [{ line: 1, column: 10 }],
     });
   });
 
   it('does not accept fragments spread of "on"', () => {
-    expectSyntaxError('{ ...on }', 'Expected Name, found }', {
-      line: 1,
-      column: 9,
+    expectSyntaxError('{ ...on }').to.deep.equal({
+      message: 'Syntax Error: Expected Name, found "}".',
+      locations: [{ line: 1, column: 9 }],
     });
   });
 
@@ -376,7 +385,7 @@ describe('Parser', () => {
     expect(() => parse(document)).to.throw('Syntax Error');
   });
 
-  it('contains location information that only stringifys start/end', () => {
+  it('contains location information that only stringifies start/end', () => {
     const result = parse('{ id }');
 
     expect(JSON.stringify(result.loc)).to.equal('{"start":0,"end":6}');

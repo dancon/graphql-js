@@ -1,8 +1,10 @@
 // @flow strict
 
 import { describe, it } from 'mocha';
+
+import { NoFragmentCycles } from '../rules/NoFragmentCycles';
+
 import { expectValidationErrors } from './harness';
-import { NoFragmentCycles, cycleErrorMessage } from '../rules/NoFragmentCycles';
 
 function expectErrors(queryStr) {
   return expectValidationErrors(NoFragmentCycles, queryStr);
@@ -62,7 +64,7 @@ describe('Validate: No circular fragment spreads', () => {
       fragment fragA on Human { relatives { ...fragA } },
     `).to.deep.equal([
       {
-        message: cycleErrorMessage('fragA', []),
+        message: 'Cannot spread fragment "fragA" within itself.',
         locations: [{ line: 2, column: 45 }],
       },
     ]);
@@ -73,7 +75,7 @@ describe('Validate: No circular fragment spreads', () => {
       fragment fragA on Dog { ...fragA }
     `).to.deep.equal([
       {
-        message: cycleErrorMessage('fragA', []),
+        message: 'Cannot spread fragment "fragA" within itself.',
         locations: [{ line: 2, column: 31 }],
       },
     ]);
@@ -88,7 +90,7 @@ describe('Validate: No circular fragment spreads', () => {
       }
     `).to.deep.equal([
       {
-        message: cycleErrorMessage('fragA', []),
+        message: 'Cannot spread fragment "fragA" within itself.',
         locations: [{ line: 4, column: 11 }],
       },
     ]);
@@ -100,8 +102,11 @@ describe('Validate: No circular fragment spreads', () => {
       fragment fragB on Dog { ...fragA }
     `).to.deep.equal([
       {
-        message: cycleErrorMessage('fragA', ['fragB']),
-        locations: [{ line: 2, column: 31 }, { line: 3, column: 31 }],
+        message: 'Cannot spread fragment "fragA" within itself via "fragB".',
+        locations: [
+          { line: 2, column: 31 },
+          { line: 3, column: 31 },
+        ],
       },
     ]);
   });
@@ -112,8 +117,11 @@ describe('Validate: No circular fragment spreads', () => {
       fragment fragA on Dog { ...fragB }
     `).to.deep.equal([
       {
-        message: cycleErrorMessage('fragB', ['fragA']),
-        locations: [{ line: 2, column: 31 }, { line: 3, column: 31 }],
+        message: 'Cannot spread fragment "fragB" within itself via "fragA".',
+        locations: [
+          { line: 2, column: 31 },
+          { line: 3, column: 31 },
+        ],
       },
     ]);
   });
@@ -132,8 +140,11 @@ describe('Validate: No circular fragment spreads', () => {
       }
     `).to.deep.equal([
       {
-        message: cycleErrorMessage('fragA', ['fragB']),
-        locations: [{ line: 4, column: 11 }, { line: 9, column: 11 }],
+        message: 'Cannot spread fragment "fragA" within itself via "fragB".',
+        locations: [
+          { line: 4, column: 11 },
+          { line: 9, column: 11 },
+        ],
       },
     ]);
   });
@@ -150,12 +161,8 @@ describe('Validate: No circular fragment spreads', () => {
       fragment fragP on Dog { ...fragA, ...fragX }
     `).to.deep.equal([
       {
-        message: cycleErrorMessage('fragA', [
-          'fragB',
-          'fragC',
-          'fragO',
-          'fragP',
-        ]),
+        message:
+          'Cannot spread fragment "fragA" within itself via "fragB", "fragC", "fragO", "fragP".',
         locations: [
           { line: 2, column: 31 },
           { line: 3, column: 31 },
@@ -165,12 +172,8 @@ describe('Validate: No circular fragment spreads', () => {
         ],
       },
       {
-        message: cycleErrorMessage('fragO', [
-          'fragP',
-          'fragX',
-          'fragY',
-          'fragZ',
-        ]),
+        message:
+          'Cannot spread fragment "fragO" within itself via "fragP", "fragX", "fragY", "fragZ".',
         locations: [
           { line: 8, column: 31 },
           { line: 9, column: 41 },
@@ -189,12 +192,18 @@ describe('Validate: No circular fragment spreads', () => {
       fragment fragC on Dog { ...fragA }
     `).to.deep.equal([
       {
-        message: cycleErrorMessage('fragA', ['fragB']),
-        locations: [{ line: 2, column: 31 }, { line: 3, column: 31 }],
+        message: 'Cannot spread fragment "fragA" within itself via "fragB".',
+        locations: [
+          { line: 2, column: 31 },
+          { line: 3, column: 31 },
+        ],
       },
       {
-        message: cycleErrorMessage('fragA', ['fragC']),
-        locations: [{ line: 2, column: 41 }, { line: 4, column: 31 }],
+        message: 'Cannot spread fragment "fragA" within itself via "fragC".',
+        locations: [
+          { line: 2, column: 41 },
+          { line: 4, column: 31 },
+        ],
       },
     ]);
   });
@@ -206,12 +215,18 @@ describe('Validate: No circular fragment spreads', () => {
       fragment fragC on Dog { ...fragA, ...fragB }
     `).to.deep.equal([
       {
-        message: cycleErrorMessage('fragA', ['fragC']),
-        locations: [{ line: 2, column: 31 }, { line: 4, column: 31 }],
+        message: 'Cannot spread fragment "fragA" within itself via "fragC".',
+        locations: [
+          { line: 2, column: 31 },
+          { line: 4, column: 31 },
+        ],
       },
       {
-        message: cycleErrorMessage('fragC', ['fragB']),
-        locations: [{ line: 4, column: 41 }, { line: 3, column: 31 }],
+        message: 'Cannot spread fragment "fragC" within itself via "fragB".',
+        locations: [
+          { line: 4, column: 41 },
+          { line: 3, column: 31 },
+        ],
       },
     ]);
   });
@@ -223,11 +238,12 @@ describe('Validate: No circular fragment spreads', () => {
       fragment fragC on Dog { ...fragA, ...fragB }
     `).to.deep.equal([
       {
-        message: cycleErrorMessage('fragB', []),
+        message: 'Cannot spread fragment "fragB" within itself.',
         locations: [{ line: 3, column: 31 }],
       },
       {
-        message: cycleErrorMessage('fragA', ['fragB', 'fragC']),
+        message:
+          'Cannot spread fragment "fragA" within itself via "fragB", "fragC".',
         locations: [
           { line: 2, column: 31 },
           { line: 3, column: 41 },
@@ -235,8 +251,11 @@ describe('Validate: No circular fragment spreads', () => {
         ],
       },
       {
-        message: cycleErrorMessage('fragB', ['fragC']),
-        locations: [{ line: 3, column: 41 }, { line: 4, column: 41 }],
+        message: 'Cannot spread fragment "fragB" within itself via "fragC".',
+        locations: [
+          { line: 3, column: 41 },
+          { line: 4, column: 41 },
+        ],
       },
     ]);
   });

@@ -1,14 +1,14 @@
 // @flow strict
 
+import { GraphQLSchema } from '../type/schema';
+import { GraphQLString } from '../type/scalars';
 import {
+  GraphQLList,
+  GraphQLNonNull,
   GraphQLEnumType,
   GraphQLInterfaceType,
   GraphQLObjectType,
-  GraphQLList,
-  GraphQLNonNull,
-  GraphQLSchema,
-  GraphQLString,
-} from '../type';
+} from '../type/definition';
 
 import { getFriends, getHero, getHuman, getDroid } from './starWarsData';
 
@@ -27,7 +27,7 @@ import { getFriends, getHero, getHuman, getDroid } from './starWarsData';
  * Using our shorthand to describe type systems, the type system for our
  * Star Wars example is:
  *
- * enum Episode { NEWHOPE, EMPIRE, JEDI }
+ * enum Episode { NEW_HOPE, EMPIRE, JEDI }
  *
  * interface Character {
  *   id: String!
@@ -65,13 +65,13 @@ import { getFriends, getHero, getHuman, getDroid } from './starWarsData';
  * The original trilogy consists of three movies.
  *
  * This implements the following type system shorthand:
- *   enum Episode { NEWHOPE, EMPIRE, JEDI }
+ *   enum Episode { NEW_HOPE, EMPIRE, JEDI }
  */
 const episodeEnum = new GraphQLEnumType({
   name: 'Episode',
   description: 'One of the films in the Star Wars Trilogy',
   values: {
-    NEWHOPE: {
+    NEW_HOPE: {
       value: 4,
       description: 'Released in 1977.',
     },
@@ -259,7 +259,7 @@ const queryType = new GraphQLObjectType({
           type: episodeEnum,
         },
       },
-      resolve: (root, { episode }) => getHero(episode),
+      resolve: (_source, { episode }) => getHero(episode),
     },
     human: {
       type: humanType,
@@ -269,7 +269,7 @@ const queryType = new GraphQLObjectType({
           type: GraphQLNonNull(GraphQLString),
         },
       },
-      resolve: (root, { id }) => getHuman(id),
+      resolve: (_source, { id }) => getHuman(id),
     },
     droid: {
       type: droidType,
@@ -279,7 +279,7 @@ const queryType = new GraphQLObjectType({
           type: GraphQLNonNull(GraphQLString),
         },
       },
-      resolve: (root, { id }) => getDroid(id),
+      resolve: (_source, { id }) => getDroid(id),
     },
   }),
 });

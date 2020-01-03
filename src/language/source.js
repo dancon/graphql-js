@@ -1,6 +1,6 @@
 // @flow strict
 
-import invariant from '../jsutils/invariant';
+import devAssert from '../jsutils/devAssert';
 import defineToStringTag from '../jsutils/defineToStringTag';
 
 type Location = {|
@@ -23,15 +23,15 @@ export class Source {
 
   constructor(body: string, name?: string, locationOffset?: Location): void {
     this.body = body;
-    this.name = name || 'GraphQL request';
+    this.name = name != null ? name : 'GraphQL request';
     this.locationOffset = locationOffset || { line: 1, column: 1 };
-    invariant(
+    devAssert(
       this.locationOffset.line > 0,
-      'line in locationOffset is 1-indexed and must be positive',
+      'line in locationOffset is 1-indexed and must be positive.',
     );
-    invariant(
+    devAssert(
       this.locationOffset.column > 0,
-      'column in locationOffset is 1-indexed and must be positive',
+      'column in locationOffset is 1-indexed and must be positive.',
     );
   }
 }

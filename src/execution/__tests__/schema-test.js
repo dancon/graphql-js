@@ -3,18 +3,22 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 
-import { execute } from '../execute';
-import { parse } from '../../language';
+import { parse } from '../../language/parser';
+
+import { GraphQLSchema } from '../../type/schema';
 import {
-  GraphQLSchema,
-  GraphQLObjectType,
   GraphQLList,
   GraphQLNonNull,
+  GraphQLObjectType,
+} from '../../type/definition';
+import {
+  GraphQLID,
   GraphQLInt,
   GraphQLString,
   GraphQLBoolean,
-  GraphQLID,
-} from '../../type';
+} from '../../type/scalars';
+
+import { execute } from '../execute';
 
 describe('Execute: Handles execution with a complex schema', () => {
   it('executes using a schema', () => {
@@ -110,7 +114,7 @@ describe('Execute: Handles execution with a complex schema', () => {
       };
     }
 
-    const request = `
+    const document = parse(`
       {
         feed {
           id,
@@ -140,13 +144,13 @@ describe('Execute: Handles execution with a complex schema', () => {
         title,
         body,
         hidden,
-        notdefined
+        notDefined
       }
-    `;
+    `);
 
     // Note: this is intentionally not validating to ensure appropriate
     // behavior occurs when executing an invalid query.
-    expect(execute(BlogSchema, parse(request))).to.deep.equal({
+    expect(execute({ schema: BlogSchema, document })).to.deep.equal({
       data: {
         feed: [
           { id: '1', title: 'My Article 1' },

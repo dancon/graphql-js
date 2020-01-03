@@ -1,14 +1,12 @@
 // @flow strict
 
-import { type ASTValidationContext } from '../ValidationContext';
 import { GraphQLError } from '../../error/GraphQLError';
-import { Kind } from '../../language/kinds';
-import { isExecutableDefinitionNode } from '../../language/predicates';
-import { type ASTVisitor } from '../../language/visitor';
 
-export function nonExecutableDefinitionMessage(defName: string): string {
-  return `The ${defName} definition is not executable.`;
-}
+import { Kind } from '../../language/kinds';
+import { type ASTVisitor } from '../../language/visitor';
+import { isExecutableDefinitionNode } from '../../language/predicates';
+
+import { type ASTValidationContext } from '../ValidationContext';
 
 /**
  * Executable definitions
@@ -23,14 +21,14 @@ export function ExecutableDefinitions(
     Document(node) {
       for (const definition of node.definitions) {
         if (!isExecutableDefinitionNode(definition)) {
+          const defName =
+            definition.kind === Kind.SCHEMA_DEFINITION ||
+            definition.kind === Kind.SCHEMA_EXTENSION
+              ? 'schema'
+              : '"' + definition.name.value + '"';
           context.reportError(
             new GraphQLError(
-              nonExecutableDefinitionMessage(
-                definition.kind === Kind.SCHEMA_DEFINITION ||
-                  definition.kind === Kind.SCHEMA_EXTENSION
-                  ? 'schema'
-                  : definition.name.value,
-              ),
+              `The ${defName} definition is not executable.`,
               definition,
             ),
           );

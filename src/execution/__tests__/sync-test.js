@@ -2,11 +2,18 @@
 
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
-import { graphqlSync } from '../../graphql';
-import { execute } from '../execute';
-import { parse } from '../../language';
+
+import { parse } from '../../language/parser';
+
 import { validate } from '../../validation/validate';
-import { GraphQLSchema, GraphQLObjectType, GraphQLString } from '../../type';
+
+import { GraphQLSchema } from '../../type/schema';
+import { GraphQLString } from '../../type/scalars';
+import { GraphQLObjectType } from '../../type/definition';
+
+import { graphqlSync } from '../../graphql';
+
+import { execute } from '../execute';
 
 describe('Execute: synchronously when possible', () => {
   const schema = new GraphQLSchema({
@@ -95,7 +102,7 @@ describe('Execute: synchronously when possible', () => {
       expect(result).to.deep.equal({
         errors: [
           {
-            message: 'Syntax Error: Expected Name, found {',
+            message: 'Syntax Error: Expected Name, found "{".',
             locations: [{ line: 1, column: 29 }],
           },
         ],

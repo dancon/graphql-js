@@ -1,23 +1,20 @@
 // @flow strict
 
 import inspect from '../../jsutils/inspect';
-import { type ValidationContext } from '../ValidationContext';
+
 import { GraphQLError } from '../../error/GraphQLError';
+
 import { Kind } from '../../language/kinds';
 import { type ValueNode } from '../../language/ast';
 import { type ASTVisitor } from '../../language/visitor';
-import { type GraphQLType, isNonNullType } from '../../type/definition';
-import { isTypeSubTypeOf } from '../../utilities/typeComparators';
-import { typeFromAST } from '../../utilities/typeFromAST';
-import { type GraphQLSchema } from '../../type/schema';
 
-export function badVarPosMessage(
-  varName: string,
-  varType: string,
-  expectedType: string,
-): string {
-  return `Variable "$${varName}" of type "${varType}" used in position expecting type "${expectedType}".`;
-}
+import { type GraphQLSchema } from '../../type/schema';
+import { type GraphQLType, isNonNullType } from '../../type/definition';
+
+import { typeFromAST } from '../../utilities/typeFromAST';
+import { isTypeSubTypeOf } from '../../utilities/typeComparators';
+
+import { type ValidationContext } from '../ValidationContext';
 
 /**
  * Variables passed to field arguments conform to type
@@ -56,9 +53,11 @@ export function VariablesInAllowedPosition(
                 defaultValue,
               )
             ) {
+              const varTypeStr = inspect(varType);
+              const typeStr = inspect(type);
               context.reportError(
                 new GraphQLError(
-                  badVarPosMessage(varName, inspect(varType), inspect(type)),
+                  `Variable "$${varName}" of type "${varTypeStr}" used in position expecting type "${typeStr}".`,
                   [varDef, node],
                 ),
               );

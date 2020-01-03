@@ -1,12 +1,21 @@
 // @flow strict
 
-import flatMap from '../polyfills/flatMap';
 import objectValues from '../polyfills/objectValues';
+
 import inspect from '../jsutils/inspect';
-import { astFromValue } from '../utilities/astFromValue';
+import invariant from '../jsutils/invariant';
+
 import { print } from '../language/printer';
 import { printBlockString } from '../language/blockString';
+
 import { type GraphQLSchema } from '../type/schema';
+import { isIntrospectionType } from '../type/introspection';
+import { GraphQLString, isSpecifiedScalarType } from '../type/scalars';
+import {
+  GraphQLDirective,
+  DEFAULT_DEPRECATION_REASON,
+  isSpecifiedDirective,
+} from '../type/directives';
 import {
   type GraphQLNamedType,
   type GraphQLScalarType,
@@ -22,13 +31,8 @@ import {
   isEnumType,
   isInputObjectType,
 } from '../type/definition';
-import { GraphQLString, isSpecifiedScalarType } from '../type/scalars';
-import {
-  GraphQLDirective,
-  DEFAULT_DEPRECATION_REASON,
-  isSpecifiedDirective,
-} from '../type/directives';
-import { isIntrospectionType } from '../type/introspection';
+
+import { astFromValue } from '../utilities/astFromValue';
 
 type Options = {|
   /**
@@ -169,22 +173,27 @@ export function printType(type: GraphQLNamedType, options?: Options): string {
   }
 
   // Not reachable. All possible types have been considered.
-  /* istanbul ignore next */
-  throw new Error(`Unexpected type: "${inspect((type: empty))}".`);
+  invariant(false, 'Unexpected type: ' + inspect((type: empty)));
 }
 
 function printScalar(type: GraphQLScalarType, options): string {
   return printDescription(options, type) + `scalar ${type.name}`;
 }
 
-function printObject(type: GraphQLObjectType, options): string {
+function printImplementedInterfaces(
+  type: GraphQLObjectType | GraphQLInterfaceType,
+): string {
   const interfaces = type.getInterfaces();
-  const implementedInterfaces = interfaces.length
+  return interfaces.length
     ? ' implements ' + interfaces.map(i => i.name).join(' & ')
     : '';
+}
+
+function printObject(type: GraphQLObjectType, options): string {
   return (
     printDescription(options, type) +
-    `type ${type.name}${implementedInterfaces}` +
+    `type ${type.name}` +
+    printImplementedInterfaces(type) +
     printFields(options, type)
   );
 }
@@ -193,6 +202,7 @@ function printInterface(type: GraphQLInterfaceType, options): string {
   return (
     printDescription(options, type) +
     `interface ${type.name}` +
+    printImplementedInterfaces(type) +
     printFields(options, type)
   );
 }
@@ -301,7 +311,7 @@ function printDeprecated(fieldOrEnumVal) {
   }
   const reason = fieldOrEnumVal.deprecationReason;
   const reasonAST = astFromValue(reason, GraphQLString);
-  if (reasonAST && reason !== '' && reason !== DEFAULT_DEPRECATION_REASON) {
+  if (reasonAST && reason !== DEFAULT_DEPRECATION_REASON) {
     return ' @deprecated(reason: ' + print(reasonAST) + ')';
   }
   return ' @deprecated';
@@ -313,56 +323,29 @@ function printDescription(
   indentation = '',
   firstInBlock = true,
 ): string {
-  if (!def.description) {
+  const { description } = def;
+  if (description == null) {
     return '';
   }
 
-  const lines = descriptionLines(def.description, 120 - indentation.length);
   if (options && options.commentDescriptions) {
-    return printDescriptionWithComments(lines, indentation, firstInBlock);
+    return printDescriptionWithComments(description, indentation, firstInBlock);
   }
 
-  const text = lines.join('\n');
-  const preferMultipleLines = text.length > 70;
-  const blockString = printBlockString(text, '', preferMultipleLines);
+  const preferMultipleLines = description.length > 70;
+  const blockString = printBlockString(description, '', preferMultipleLines);
   const prefix =
     indentation && !firstInBlock ? '\n' + indentation : indentation;
 
   return prefix + blockString.replace(/\n/g, '\n' + indentation) + '\n';
 }
 
-function printDescriptionWithComments(lines, indentation, firstInBlock) {
-  let description = indentation && !firstInBlock ? '\n' : '';
-  for (const line of lines) {
-    if (line === '') {
-      description += indentation + '#\n';
-    } else {
-      description += indentation + '# ' + line + '\n';
-    }
-  }
-  return description;
-}
+function printDescriptionWithComments(description, indentation, firstInBlock) {
+  const prefix = indentation && !firstInBlock ? '\n' : '';
+  const comment = description
+    .split('\n')
+    .map(line => indentation + (line !== '' ? '# ' + line : '#'))
+    .join('\n');
 
-function descriptionLines(description: string, maxLen: number): Array<string> {
-  const rawLines = description.split('\n');
-  return flatMap(rawLines, line => {
-    if (line.length < maxLen + 5) {
-      return line;
-    }
-    // For > 120 character long lines, cut at space boundaries into sublines
-    // of ~80 chars.
-    return breakLine(line, maxLen);
-  });
-}
-
-function breakLine(line: string, maxLen: number): Array<string> {
-  const parts = line.split(new RegExp(`((?: |^).{15,${maxLen - 40}}(?= |$))`));
-  if (parts.length < 4) {
-    return [line];
-  }
-  const sublines = [parts[0] + parts[1] + parts[2]];
-  for (let i = 3; i < parts.length; i += 2) {
-    sublines.push(parts[i].slice(1) + parts[i + 1]);
-  }
-  return sublines;
+  return prefix + comment + '\n';
 }

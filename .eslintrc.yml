@@ -4,24 +4,21 @@ parserOptions:
 env:
   es6: true
   node: true
+reportUnusedDisableDirectives: true
 plugins:
   - flowtype
-  - prettier
 
 rules:
-  # https://github.com/prettier/eslint-plugin-prettier#installation
-  prettier/prettier: error
-
-  # `eslint-plugin-flowtype` rule list based on `v3.10.x`
+  # `eslint-plugin-flowtype` rule list based on `v4.4.x`
   # https://github.com/gajus/eslint-plugin-flowtype#eslint-plugin-flowtype
 
-  flowtype/array-style-complex-type: [error, verbose]
-  flowtype/array-style-simple-type: [error, verbose]
+  flowtype/array-style-complex-type: error
+  flowtype/array-style-simple-type: error
   flowtype/define-flow-type: error
-  flowtype/newline-after-flow-annotation: [error, always]
+  flowtype/newline-after-flow-annotation: error
   flowtype/no-dupe-keys: error
-  flowtype/no-existential-type: off # TODO
-  flowtype/no-flow-fix-me-comments: off # TODO
+  flowtype/no-existential-type: off # checked by Flow
+  flowtype/no-flow-fix-me-comments: off
   flowtype/no-mixed: off
   flowtype/no-mutable-array: off
   flowtype/no-primitive-constructor-types: error
@@ -29,13 +26,15 @@ rules:
   flowtype/no-unused-expressions: off
   flowtype/no-weak-types: [error, { any: false }]
   flowtype/require-compound-type-alias: off
-  flowtype/require-exact-type: off # TODO
+  flowtype/require-exact-type: off
+  flowtype/require-indexer-name: error
   flowtype/require-inexact-type: off # checked by Flow
   flowtype/require-parameter-type: off
   flowtype/require-readonly-react-props: off
   flowtype/require-return-type: off
   flowtype/require-types-at-top: off
-  flowtype/require-valid-file-annotation: [error, always, { annotationStyle: line }]
+  flowtype/require-valid-file-annotation:
+    [error, always, { annotationStyle: line, strict: true }]
   flowtype/require-variable-type: off
   flowtype/sort-keys: off
   flowtype/spread-exact-type: off
@@ -45,6 +44,7 @@ rules:
 
   # Bellow rules are disabled because coflicts with Prettier, see:
   # https://github.com/prettier/eslint-config-prettier/blob/master/flowtype.js
+  flowtype/arrow-parens: off
   flowtype/boolean-style: off
   flowtype/delimiter-dangle: off
   flowtype/generic-spacing: off
@@ -56,7 +56,7 @@ rules:
   flowtype/union-intersection-spacing: off
 
   ##################################################
-  # ESLint builtin rules list based on `v5.16.x`
+  # ESLint builtin rules list based on `v6.8.x`
   ##################################################
 
   # Possible Errors
@@ -73,6 +73,7 @@ rules:
   no-control-regex: error
   no-debugger: warn
   no-dupe-args: error
+  no-dupe-else-if: error
   no-dupe-keys: error
   no-duplicate-case: error
   no-empty: error
@@ -80,6 +81,7 @@ rules:
   no-ex-assign: error
   no-extra-boolean-cast: error
   no-func-assign: error
+  no-import-assign: error
   no-inner-declarations: [error, both]
   no-invalid-regexp: error
   no-irregular-whitespace: error
@@ -87,6 +89,7 @@ rules:
   no-obj-calls: error
   no-prototype-builtins: error
   no-regex-spaces: error
+  no-setter-return: error
   no-sparse-arrays: error
   no-template-curly-in-string: error
   no-unreachable: error
@@ -100,23 +103,26 @@ rules:
   # https://eslint.org/docs/rules/#best-practices
 
   accessor-pairs: error
-  array-callback-return: [error, { allowImplicit: true }]
+  array-callback-return: error
   block-scoped-var: error
   class-methods-use-this: off
-  complexity: off # maybe
-  consistent-return: off # TODO
-  curly: [error, all]
+  complexity: off
+  consistent-return: off
+  curly: error
   default-case: off
+  default-param-last: error
   dot-notation: off
   eqeqeq: [error, smart]
+  grouped-accessor-pairs: error
   guard-for-in: error
   max-classes-per-file: off
   no-alert: error
   no-caller: error
   no-case-declarations: error
+  no-constructor-return: error
   no-div-regex: error
   no-else-return: error
-  no-empty-function: off # TODO
+  no-empty-function: error
   no-empty-pattern: error
   no-eq-null: off
   no-eval: error
@@ -130,7 +136,7 @@ rules:
   no-implied-eval: error
   no-invalid-this: off
   no-iterator: error
-  no-labels: [error, {allowLoop: true}]
+  no-labels: error
   no-lone-blocks: error
   no-loop-func: error
   no-magic-numbers: off
@@ -164,11 +170,12 @@ rules:
   no-with: error
   prefer-named-capture-group: off # ES2018
   prefer-promise-reject-errors: error
+  prefer-regex-literals: error
   radix: error
-  require-await: off # TODO
+  require-await: error
   require-unicode-regexp: off
   vars-on-top: error
-  yoda: [error, never, {exceptRange: true}]
+  yoda: [error, never, { exceptRange: true }]
 
   # Strict Mode
   # https://eslint.org/docs/rules/#strict-mode
@@ -187,7 +194,7 @@ rules:
   no-undef: error
   no-undef-init: error
   no-undefined: off
-  no-unused-vars: [error, {vars: all, args: after-used, argsIgnorePattern: "^_"}]
+  no-unused-vars: [error, { vars: all, args: all, argsIgnorePattern: '^_' }]
   no-use-before-define: off
 
   # Node.js and CommonJS
@@ -197,7 +204,7 @@ rules:
   global-require: error
   handle-callback-err: [error, error]
   no-buffer-constructor: error
-  no-mixed-requires: [error, true]
+  no-mixed-requires: error
   no-new-require: error
   no-path-concat: error
   no-process-env: off
@@ -208,7 +215,7 @@ rules:
   # Stylistic Issues
   # https://eslint.org/docs/rules/#stylistic-issues
 
-  camelcase: [error, {properties: always}]
+  camelcase: error
   capitalized-comments: off # maybe
   consistent-this: off
   func-name-matching: off
@@ -216,7 +223,7 @@ rules:
   func-style: off
   id-blacklist: off
   id-length: off
-  id-match: [error, "^(?:_?[a-zA-Z0-9]*)|[_A-Z0-9]+$"]
+  id-match: [error, '^(?:_?[a-zA-Z0-9]*)|[_A-Z0-9]+$']
   line-comment-position: off
   lines-around-comment: off
   lines-between-class-members: [error, always, { exceptAfterSingleLine: true }]
@@ -251,13 +258,14 @@ rules:
   no-underscore-dangle: off
   no-unneeded-ternary: error
   one-var: [error, never]
-  operator-assignment: [error, always]
+  operator-assignment: error
   padding-line-between-statements: off
+  prefer-exponentiation-operator: error
   prefer-object-spread: error
-  quotes: [error, single, { avoidEscape: true, allowTemplateLiterals: false }]
+  quotes: [error, single, { avoidEscape: true }]
   sort-keys: off
   sort-vars: off
-  spaced-comment: [error, always]
+  spaced-comment: error
 
   # ECMAScript 6
   # https://eslint.org/docs/rules/#ecmascript-6
@@ -275,7 +283,7 @@ rules:
   no-useless-constructor: error
   no-useless-rename: error
   no-var: error
-  object-shorthand: [error, always]
+  object-shorthand: error
   prefer-arrow-callback: error
   prefer-const: error
   prefer-destructuring: off
@@ -283,7 +291,7 @@ rules:
   prefer-rest-params: off # TODO
   prefer-spread: error
   prefer-template: off
-  require-yield: off
+  require-yield: error
   sort-imports: off
   symbol-description: off
 
@@ -303,6 +311,7 @@ rules:
   dot-location: off
   eol-last: off
   func-call-spacing: off
+  function-call-argument-newline: off
   function-paren-newline: off
   generator-star-spacing: off
   implicit-arrow-linebreak: off
@@ -310,7 +319,7 @@ rules:
   jsx-quotes: off
   key-spacing: off
   keyword-spacing: off
-  linebreak-style: error
+  linebreak-style: off
   max-len: off
   multiline-ternary: off
   newline-per-chained-call: off
@@ -323,7 +332,6 @@ rules:
   no-mixed-spaces-and-tabs: off
   no-multi-spaces: off
   no-multiple-empty-lines: off
-  no-spaced-func: off
   no-trailing-spaces: off
   no-unexpected-multiline: off
   no-whitespace-before-property: off
@@ -353,13 +361,14 @@ rules:
   yield-star-spacing: off
 
 overrides:
-  - files: "**/__tests__/**"
+  - files: '**/__tests__/**'
     rules:
       no-restricted-syntax: off
-  - files: "resources/**"
+  - files: 'resources/**'
     parserOptions:
       sourceType: script
     rules:
+      no-await-in-loop: off
       no-restricted-syntax: off
       no-console: off
       no-sync: off

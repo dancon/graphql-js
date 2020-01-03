@@ -1,16 +1,9 @@
 // @flow strict
 
-import { type SDLValidationContext } from '../ValidationContext';
 import { GraphQLError } from '../../error/GraphQLError';
 import { type ASTVisitor } from '../../language/visitor';
 
-export function duplicateDirectiveNameMessage(directiveName: string): string {
-  return `There can be only one directive named "${directiveName}".`;
-}
-
-export function existedDirectiveNameMessage(directiveName: string): string {
-  return `Directive "${directiveName}" already exists in the schema. It cannot be redefined.`;
-}
+import { type SDLValidationContext } from '../ValidationContext';
 
 /**
  * Unique directive names
@@ -30,7 +23,7 @@ export function UniqueDirectiveNames(
       if (schema && schema.getDirective(directiveName)) {
         context.reportError(
           new GraphQLError(
-            existedDirectiveNameMessage(directiveName),
+            `Directive "@${directiveName}" already exists in the schema. It cannot be redefined.`,
             node.name,
           ),
         );
@@ -39,10 +32,10 @@ export function UniqueDirectiveNames(
 
       if (knownDirectiveNames[directiveName]) {
         context.reportError(
-          new GraphQLError(duplicateDirectiveNameMessage(directiveName), [
-            knownDirectiveNames[directiveName],
-            node.name,
-          ]),
+          new GraphQLError(
+            `There can be only one directive named "@${directiveName}".`,
+            [knownDirectiveNames[directiveName], node.name],
+          ),
         );
       } else {
         knownDirectiveNames[directiveName] = node.name;

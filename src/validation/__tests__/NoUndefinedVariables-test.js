@@ -1,11 +1,10 @@
 // @flow strict
 
 import { describe, it } from 'mocha';
+
+import { NoUndefinedVariables } from '../rules/NoUndefinedVariables';
+
 import { expectValidationErrors } from './harness';
-import {
-  NoUndefinedVariables,
-  undefinedVarMessage,
-} from '../rules/NoUndefinedVariables';
 
 function expectErrors(queryStr) {
   return expectValidationErrors(NoUndefinedVariables, queryStr);
@@ -13,13 +12,6 @@ function expectErrors(queryStr) {
 
 function expectValid(queryStr) {
   expectErrors(queryStr).to.deep.equal([]);
-}
-
-function undefVar(varName, l1, c1, opName, l2, c2) {
-  return {
-    message: undefinedVarMessage(varName, opName),
-    locations: [{ line: l1, column: c1 }, { line: l2, column: c2 }],
-  };
 }
 
 describe('Validate: No undefined variables', () => {
@@ -129,7 +121,15 @@ describe('Validate: No undefined variables', () => {
       query Foo($a: String, $b: String, $c: String) {
         field(a: $a, b: $b, c: $c, d: $d)
       }
-    `).to.deep.equal([undefVar('d', 3, 39, 'Foo', 2, 7)]);
+    `).to.deep.equal([
+      {
+        message: 'Variable "$d" is not defined by operation "Foo".',
+        locations: [
+          { line: 3, column: 39 },
+          { line: 2, column: 7 },
+        ],
+      },
+    ]);
   });
 
   it('variable not defined by un-named query', () => {
@@ -137,7 +137,15 @@ describe('Validate: No undefined variables', () => {
       {
         field(a: $a)
       }
-   `).to.deep.equal([undefVar('a', 3, 18, '', 2, 7)]);
+    `).to.deep.equal([
+      {
+        message: 'Variable "$a" is not defined.',
+        locations: [
+          { line: 3, column: 18 },
+          { line: 2, column: 7 },
+        ],
+      },
+    ]);
   });
 
   it('multiple variables not defined', () => {
@@ -146,8 +154,20 @@ describe('Validate: No undefined variables', () => {
         field(a: $a, b: $b, c: $c)
       }
     `).to.deep.equal([
-      undefVar('a', 3, 18, 'Foo', 2, 7),
-      undefVar('c', 3, 32, 'Foo', 2, 7),
+      {
+        message: 'Variable "$a" is not defined by operation "Foo".',
+        locations: [
+          { line: 3, column: 18 },
+          { line: 2, column: 7 },
+        ],
+      },
+      {
+        message: 'Variable "$c" is not defined by operation "Foo".',
+        locations: [
+          { line: 3, column: 32 },
+          { line: 2, column: 7 },
+        ],
+      },
     ]);
   });
 
@@ -159,7 +179,15 @@ describe('Validate: No undefined variables', () => {
       fragment FragA on Type {
         field(a: $a)
       }
-    `).to.deep.equal([undefVar('a', 6, 18, '', 2, 7)]);
+    `).to.deep.equal([
+      {
+        message: 'Variable "$a" is not defined.',
+        locations: [
+          { line: 6, column: 18 },
+          { line: 2, column: 7 },
+        ],
+      },
+    ]);
   });
 
   it('variable in fragment not defined by operation', () => {
@@ -180,7 +208,15 @@ describe('Validate: No undefined variables', () => {
       fragment FragC on Type {
         field(c: $c)
       }
-    `).to.deep.equal([undefVar('c', 16, 18, 'Foo', 2, 7)]);
+    `).to.deep.equal([
+      {
+        message: 'Variable "$c" is not defined by operation "Foo".',
+        locations: [
+          { line: 16, column: 18 },
+          { line: 2, column: 7 },
+        ],
+      },
+    ]);
   });
 
   it('multiple variables in fragments not defined', () => {
@@ -202,8 +238,20 @@ describe('Validate: No undefined variables', () => {
         field(c: $c)
       }
     `).to.deep.equal([
-      undefVar('a', 6, 18, 'Foo', 2, 7),
-      undefVar('c', 16, 18, 'Foo', 2, 7),
+      {
+        message: 'Variable "$a" is not defined by operation "Foo".',
+        locations: [
+          { line: 6, column: 18 },
+          { line: 2, column: 7 },
+        ],
+      },
+      {
+        message: 'Variable "$c" is not defined by operation "Foo".',
+        locations: [
+          { line: 16, column: 18 },
+          { line: 2, column: 7 },
+        ],
+      },
     ]);
   });
 
@@ -219,8 +267,20 @@ describe('Validate: No undefined variables', () => {
         field(a: $a, b: $b)
       }
     `).to.deep.equal([
-      undefVar('b', 9, 25, 'Foo', 2, 7),
-      undefVar('b', 9, 25, 'Bar', 5, 7),
+      {
+        message: 'Variable "$b" is not defined by operation "Foo".',
+        locations: [
+          { line: 9, column: 25 },
+          { line: 2, column: 7 },
+        ],
+      },
+      {
+        message: 'Variable "$b" is not defined by operation "Bar".',
+        locations: [
+          { line: 9, column: 25 },
+          { line: 5, column: 7 },
+        ],
+      },
     ]);
   });
 
@@ -236,8 +296,20 @@ describe('Validate: No undefined variables', () => {
         field(a: $a, b: $b)
       }
     `).to.deep.equal([
-      undefVar('a', 9, 18, 'Foo', 2, 7),
-      undefVar('b', 9, 25, 'Bar', 5, 7),
+      {
+        message: 'Variable "$a" is not defined by operation "Foo".',
+        locations: [
+          { line: 9, column: 18 },
+          { line: 2, column: 7 },
+        ],
+      },
+      {
+        message: 'Variable "$b" is not defined by operation "Bar".',
+        locations: [
+          { line: 9, column: 25 },
+          { line: 5, column: 7 },
+        ],
+      },
     ]);
   });
 
@@ -256,8 +328,20 @@ describe('Validate: No undefined variables', () => {
         field(b: $b)
       }
     `).to.deep.equal([
-      undefVar('a', 9, 18, 'Foo', 2, 7),
-      undefVar('b', 12, 18, 'Bar', 5, 7),
+      {
+        message: 'Variable "$a" is not defined by operation "Foo".',
+        locations: [
+          { line: 9, column: 18 },
+          { line: 2, column: 7 },
+        ],
+      },
+      {
+        message: 'Variable "$b" is not defined by operation "Bar".',
+        locations: [
+          { line: 12, column: 18 },
+          { line: 5, column: 7 },
+        ],
+      },
     ]);
   });
 
@@ -278,12 +362,48 @@ describe('Validate: No undefined variables', () => {
         field2(c: $c)
       }
     `).to.deep.equal([
-      undefVar('a', 9, 19, 'Foo', 2, 7),
-      undefVar('a', 11, 19, 'Foo', 2, 7),
-      undefVar('c', 14, 19, 'Foo', 2, 7),
-      undefVar('b', 9, 26, 'Bar', 5, 7),
-      undefVar('b', 11, 26, 'Bar', 5, 7),
-      undefVar('c', 14, 19, 'Bar', 5, 7),
+      {
+        message: 'Variable "$a" is not defined by operation "Foo".',
+        locations: [
+          { line: 9, column: 19 },
+          { line: 2, column: 7 },
+        ],
+      },
+      {
+        message: 'Variable "$a" is not defined by operation "Foo".',
+        locations: [
+          { line: 11, column: 19 },
+          { line: 2, column: 7 },
+        ],
+      },
+      {
+        message: 'Variable "$c" is not defined by operation "Foo".',
+        locations: [
+          { line: 14, column: 19 },
+          { line: 2, column: 7 },
+        ],
+      },
+      {
+        message: 'Variable "$b" is not defined by operation "Bar".',
+        locations: [
+          { line: 9, column: 26 },
+          { line: 5, column: 7 },
+        ],
+      },
+      {
+        message: 'Variable "$b" is not defined by operation "Bar".',
+        locations: [
+          { line: 11, column: 26 },
+          { line: 5, column: 7 },
+        ],
+      },
+      {
+        message: 'Variable "$c" is not defined by operation "Bar".',
+        locations: [
+          { line: 14, column: 19 },
+          { line: 5, column: 7 },
+        ],
+      },
     ]);
   });
 });

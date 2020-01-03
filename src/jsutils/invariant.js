@@ -1,9 +1,10 @@
 // @flow strict
 
-export default function invariant(condition: mixed, message: string) {
+export default function invariant(condition: mixed, message?: string): void {
   const booleanCondition = Boolean(condition);
-  /* istanbul ignore else */
   if (!booleanCondition) {
-    throw new Error(message);
+    throw new Error(
+      message != null ? message : 'Unexpected invariant triggered.',
+    );
   }
 }

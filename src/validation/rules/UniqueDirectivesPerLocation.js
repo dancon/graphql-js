@@ -1,18 +1,17 @@
 // @flow strict
 
+import { GraphQLError } from '../../error/GraphQLError';
+
+import { Kind } from '../../language/kinds';
+import { type DirectiveNode } from '../../language/ast';
+import { type ASTVisitor } from '../../language/visitor';
+
+import { specifiedDirectives } from '../../type/directives';
+
 import {
   type SDLValidationContext,
   type ValidationContext,
 } from '../ValidationContext';
-import { GraphQLError } from '../../error/GraphQLError';
-import { Kind } from '../../language/kinds';
-import { type DirectiveNode } from '../../language/ast';
-import { type ASTVisitor } from '../../language/visitor';
-import { specifiedDirectives } from '../../type/directives';
-
-export function duplicateDirectiveMessage(directiveName: string): string {
-  return `The directive "${directiveName}" can only be used once at this location.`;
-}
 
 /**
  * Unique directive names per location
@@ -56,10 +55,10 @@ export function UniqueDirectivesPerLocation(
           if (uniqueDirectiveMap[directiveName]) {
             if (knownDirectives[directiveName]) {
               context.reportError(
-                new GraphQLError(duplicateDirectiveMessage(directiveName), [
-                  knownDirectives[directiveName],
-                  directive,
-                ]),
+                new GraphQLError(
+                  `The directive "@${directiveName}" can only be used once at this location.`,
+                  [knownDirectives[directiveName], directive],
+                ),
               );
             } else {
               knownDirectives[directiveName] = directive;

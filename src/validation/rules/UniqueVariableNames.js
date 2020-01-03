@@ -1,13 +1,11 @@
 // @flow strict
 
-import { type ASTValidationContext } from '../ValidationContext';
-import { type VariableDefinitionNode } from '../../language/ast';
 import { GraphQLError } from '../../error/GraphQLError';
-import { type ASTVisitor } from '../../language/visitor';
 
-export function duplicateVariableMessage(variableName: string): string {
-  return `There can be only one variable named "${variableName}".`;
-}
+import { type ASTVisitor } from '../../language/visitor';
+import { type VariableDefinitionNode } from '../../language/ast';
+
+import { type ASTValidationContext } from '../ValidationContext';
 
 /**
  * Unique variable names
@@ -24,10 +22,10 @@ export function UniqueVariableNames(context: ASTValidationContext): ASTVisitor {
       const variableName = node.variable.name.value;
       if (knownVariableNames[variableName]) {
         context.reportError(
-          new GraphQLError(duplicateVariableMessage(variableName), [
-            knownVariableNames[variableName],
-            node.variable.name,
-          ]),
+          new GraphQLError(
+            `There can be only one variable named "$${variableName}".`,
+            [knownVariableNames[variableName], node.variable.name],
+          ),
         );
       } else {
         knownVariableNames[variableName] = node.variable.name;

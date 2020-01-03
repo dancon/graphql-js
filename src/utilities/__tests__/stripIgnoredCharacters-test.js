@@ -5,9 +5,14 @@ import { describe, it } from 'mocha';
 
 import dedent from '../../jsutils/dedent';
 import invariant from '../../jsutils/invariant';
-import { parse, createLexer, Source } from '../../language';
-import { kitchenSinkQuery, kitchenSinkSDL } from '../../__fixtures__';
+
+import { parse } from '../../language/parser';
+import { Source } from '../../language/source';
+import { Lexer } from '../../language/lexer';
+
 import { stripIgnoredCharacters } from '../stripIgnoredCharacters';
+
+import { kitchenSinkQuery, kitchenSinkSDL } from '../../__fixtures__';
 
 const ignoredTokens = [
   // UnicodeBOM ::
@@ -54,57 +59,64 @@ const nonPunctuatorTokens = [
 ];
 
 function lexValue(str) {
-  const lexer = createLexer(new Source(str));
+  const lexer = new Lexer(new Source(str));
   const value = lexer.advance().value;
-  invariant(lexer.advance().kind === '<EOF>');
+
+  invariant(lexer.advance().kind === '<EOF>', 'Expected EOF');
   return value;
+}
+
+// Called only to make error messages for failing tests
+/* istanbul ignore next */
+function inspectStr(str) {
+  return (JSON.stringify(str) || '')
+    .replace(/^"|"$/g, '`')
+    .replace(/\\"/g, '"');
 }
 
 function expectStripped(docString) {
   return {
     toEqual(expected) {
       const stripped = stripIgnoredCharacters(docString);
+
       invariant(
         stripped === expected,
-        `Expected stripIgnoredCharacters(${inspectStr(docString)})\n` +
-          `\tto equal ${inspectStr(expected)}\n` +
-          `\tbut got  ${inspectStr(stripped)}`,
+        dedent`
+          Expected stripIgnoredCharacters(${inspectStr(docString)})
+            to equal ${inspectStr(expected)}
+            but got  ${inspectStr(stripped)}
+        `,
       );
 
       const strippedTwice = stripIgnoredCharacters(stripped);
+
       invariant(
         stripped === strippedTwice,
-        `Expected stripIgnoredCharacters(${inspectStr(stripped)})\n` +
-          `\tto equal ${inspectStr(stripped)}\n` +
-          `\tbut got  ${inspectStr(strippedTwice)}`,
+        dedent`
+          Expected stripIgnoredCharacters(${inspectStr(stripped)})
+            to equal ${inspectStr(stripped)}
+            but got  ${inspectStr(strippedTwice)}
+        `,
       );
     },
     toStayTheSame() {
       this.toEqual(docString);
     },
   };
-
-  function inspectStr(str) {
-    // Called only to make error messages for failing tests
-    /* istanbul ignore next */
-    return JSON.stringify(str)
-      .replace(/^"|"$/g, '`')
-      .replace(/\\"/g, '"');
-  }
 }
 
 describe('stripIgnoredCharacters', () => {
   it('asserts that a source was provided', () => {
     // $DisableFlowOnNegativeTest
     expect(() => stripIgnoredCharacters()).to.throw(
-      'Must provide string or Source. Received: undefined',
+      'Must provide string or Source. Received: undefined.',
     );
   });
 
   it('asserts that a valid source was provided', () => {
     // $DisableFlowOnNegativeTest
     expect(() => stripIgnoredCharacters({})).to.throw(
-      'Must provide string or Source. Received: {}',
+      'Must provide string or Source. Received: {}.',
     );
   });
 
@@ -145,21 +157,21 @@ describe('stripIgnoredCharacters', () => {
   });
 
   it('report document with invalid token', () => {
-    let catchedError;
+    let caughtError;
 
     try {
       stripIgnoredCharacters('{ foo(arg: "\n"');
     } catch (e) {
-      catchedError = e;
+      caughtError = e;
     }
 
-    expect(String(catchedError) + '\n').to.equal(dedent`
+    expect(String(caughtError) + '\n').to.equal(dedent`
       Syntax Error: Unterminated string.
 
       GraphQL request:1:13
-      1: { foo(arg: "
-                     ^
-      2: "
+      1 | { foo(arg: "
+        |             ^
+      2 | "
     `);
   });
 
@@ -396,11 +408,16 @@ describe('stripIgnoredCharacters', () => {
   it('strips ignored characters inside block strings', () => {
     function expectStrippedString(blockStr) {
       const originalValue = lexValue(blockStr);
+      const strippedValue = lexValue(stripIgnoredCharacters(blockStr));
 
-      const strippedStr = stripIgnoredCharacters(blockStr);
-      const strippedValue = lexValue(strippedStr);
-
-      invariant(originalValue === strippedValue);
+      invariant(
+        originalValue === strippedValue,
+        dedent`
+        Expected lexValue(stripIgnoredCharacters(${inspectStr(blockStr)}))
+          to equal ${inspectStr(originalValue)}
+          but got  ${inspectStr(strippedValue)}
+      `,
+      );
       return expectStripped(blockStr);
     }
 
@@ -452,10 +469,16 @@ describe('stripIgnoredCharacters', () => {
           continue; // skip invalid values
         }
 
-        const strippedStr = stripIgnoredCharacters(testStr);
-        const strippedValue = lexValue(strippedStr);
+        const strippedValue = lexValue(stripIgnoredCharacters(testStr));
 
-        invariant(testValue === strippedValue);
+        invariant(
+          testValue === strippedValue,
+          dedent`
+            Expected lexValue(stripIgnoredCharacters(${inspectStr(testStr)}))
+              to equal ${inspectStr(testValue)}
+              but got  ${inspectStr(strippedValue)}
+          `,
+        );
       }
     }
   });

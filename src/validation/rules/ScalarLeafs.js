@@ -1,25 +1,15 @@
 // @flow strict
 
 import inspect from '../../jsutils/inspect';
-import { type ValidationContext } from '../ValidationContext';
+
 import { GraphQLError } from '../../error/GraphQLError';
+
 import { type FieldNode } from '../../language/ast';
-import { getNamedType, isLeafType } from '../../type/definition';
 import { type ASTVisitor } from '../../language/visitor';
 
-export function noSubselectionAllowedMessage(
-  fieldName: string,
-  type: string,
-): string {
-  return `Field "${fieldName}" must not have a selection since type "${type}" has no subfields.`;
-}
+import { getNamedType, isLeafType } from '../../type/definition';
 
-export function requiredSubselectionMessage(
-  fieldName: string,
-  type: string,
-): string {
-  return `Field "${fieldName}" of type "${type}" must have a selection of subfields. Did you mean "${fieldName} { ... }"?`;
-}
+import { type ValidationContext } from '../ValidationContext';
 
 /**
  * Scalar leafs
@@ -35,17 +25,21 @@ export function ScalarLeafs(context: ValidationContext): ASTVisitor {
       if (type) {
         if (isLeafType(getNamedType(type))) {
           if (selectionSet) {
+            const fieldName = node.name.value;
+            const typeStr = inspect(type);
             context.reportError(
               new GraphQLError(
-                noSubselectionAllowedMessage(node.name.value, inspect(type)),
+                `Field "${fieldName}" must not have a selection since type "${typeStr}" has no subfields.`,
                 selectionSet,
               ),
             );
           }
         } else if (!selectionSet) {
+          const fieldName = node.name.value;
+          const typeStr = inspect(type);
           context.reportError(
             new GraphQLError(
-              requiredSubselectionMessage(node.name.value, inspect(type)),
+              `Field "${fieldName}" of type "${typeStr}" must have a selection of subfields. Did you mean "${fieldName} { ... }"?`,
               node,
             ),
           );

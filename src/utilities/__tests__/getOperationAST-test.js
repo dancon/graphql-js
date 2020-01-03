@@ -2,7 +2,9 @@
 
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
-import { parse } from '../../language';
+
+import { parse } from '../../language/parser';
+
 import { getOperationAST } from '../getOperationAST';
 
 describe('getOperationAST', () => {

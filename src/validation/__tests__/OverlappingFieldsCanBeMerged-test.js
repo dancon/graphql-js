@@ -1,17 +1,15 @@
 // @flow strict
 
-import { expect } from 'chai';
 import { describe, it } from 'mocha';
-import { buildSchema } from '../../';
+
+import { buildSchema } from '../../utilities/buildASTSchema';
+
+import { OverlappingFieldsCanBeMerged } from '../rules/OverlappingFieldsCanBeMerged';
+
 import {
   expectValidationErrors,
   expectValidationErrorsWithSchema,
 } from './harness';
-
-import {
-  OverlappingFieldsCanBeMerged,
-  fieldsConflictMessage,
-} from '../rules/OverlappingFieldsCanBeMerged';
 
 function expectErrors(queryStr) {
   return expectValidationErrors(OverlappingFieldsCanBeMerged, queryStr);
@@ -108,11 +106,12 @@ describe('Validate: Overlapping fields can be merged', () => {
       }
     `).to.deep.equal([
       {
-        message: fieldsConflictMessage(
-          'fido',
-          'name and nickname are different fields',
-        ),
-        locations: [{ line: 3, column: 9 }, { line: 4, column: 9 }],
+        message:
+          'Fields "fido" conflict because "name" and "nickname" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
+        locations: [
+          { line: 3, column: 9 },
+          { line: 4, column: 9 },
+        ],
       },
     ]);
   });
@@ -140,11 +139,12 @@ describe('Validate: Overlapping fields can be merged', () => {
       }
     `).to.deep.equal([
       {
-        message: fieldsConflictMessage(
-          'name',
-          'nickname and name are different fields',
-        ),
-        locations: [{ line: 3, column: 9 }, { line: 4, column: 9 }],
+        message:
+          'Fields "name" conflict because "nickname" and "name" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
+        locations: [
+          { line: 3, column: 9 },
+          { line: 4, column: 9 },
+        ],
       },
     ]);
   });
@@ -157,11 +157,12 @@ describe('Validate: Overlapping fields can be merged', () => {
       }
     `).to.deep.equal([
       {
-        message: fieldsConflictMessage(
-          'doesKnowCommand',
-          'they have differing arguments',
-        ),
-        locations: [{ line: 3, column: 9 }, { line: 4, column: 9 }],
+        message:
+          'Fields "doesKnowCommand" conflict because they have differing arguments. Use different aliases on the fields to fetch both if this was intentional.',
+        locations: [
+          { line: 3, column: 9 },
+          { line: 4, column: 9 },
+        ],
       },
     ]);
   });
@@ -174,11 +175,12 @@ describe('Validate: Overlapping fields can be merged', () => {
       }
     `).to.deep.equal([
       {
-        message: fieldsConflictMessage(
-          'doesKnowCommand',
-          'they have differing arguments',
-        ),
-        locations: [{ line: 3, column: 9 }, { line: 4, column: 9 }],
+        message:
+          'Fields "doesKnowCommand" conflict because they have differing arguments. Use different aliases on the fields to fetch both if this was intentional.',
+        locations: [
+          { line: 3, column: 9 },
+          { line: 4, column: 9 },
+        ],
       },
     ]);
   });
@@ -191,11 +193,12 @@ describe('Validate: Overlapping fields can be merged', () => {
       }
     `).to.deep.equal([
       {
-        message: fieldsConflictMessage(
-          'doesKnowCommand',
-          'they have differing arguments',
-        ),
-        locations: [{ line: 3, column: 9 }, { line: 4, column: 9 }],
+        message:
+          'Fields "doesKnowCommand" conflict because they have differing arguments. Use different aliases on the fields to fetch both if this was intentional.',
+        locations: [
+          { line: 3, column: 9 },
+          { line: 4, column: 9 },
+        ],
       },
     ]);
   });
@@ -229,8 +232,12 @@ describe('Validate: Overlapping fields can be merged', () => {
       }
     `).to.deep.equal([
       {
-        message: fieldsConflictMessage('x', 'a and b are different fields'),
-        locations: [{ line: 7, column: 9 }, { line: 10, column: 9 }],
+        message:
+          'Fields "x" conflict because "a" and "b" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
+        locations: [
+          { line: 7, column: 9 },
+          { line: 10, column: 9 },
+        ],
       },
     ]);
   });
@@ -260,16 +267,28 @@ describe('Validate: Overlapping fields can be merged', () => {
       }
     `).to.deep.equal([
       {
-        message: fieldsConflictMessage('x', 'a and b are different fields'),
-        locations: [{ line: 18, column: 9 }, { line: 21, column: 9 }],
+        message:
+          'Fields "x" conflict because "a" and "b" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
+        locations: [
+          { line: 18, column: 9 },
+          { line: 21, column: 9 },
+        ],
       },
       {
-        message: fieldsConflictMessage('x', 'c and a are different fields'),
-        locations: [{ line: 14, column: 11 }, { line: 18, column: 9 }],
+        message:
+          'Fields "x" conflict because "c" and "a" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
+        locations: [
+          { line: 14, column: 11 },
+          { line: 18, column: 9 },
+        ],
       },
       {
-        message: fieldsConflictMessage('x', 'c and b are different fields'),
-        locations: [{ line: 14, column: 11 }, { line: 21, column: 9 }],
+        message:
+          'Fields "x" conflict because "c" and "b" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
+        locations: [
+          { line: 14, column: 11 },
+          { line: 21, column: 9 },
+        ],
       },
     ]);
   });
@@ -286,9 +305,8 @@ describe('Validate: Overlapping fields can be merged', () => {
       }
     `).to.deep.equal([
       {
-        message: fieldsConflictMessage('field', [
-          ['x', 'a and b are different fields'],
-        ]),
+        message:
+          'Fields "field" conflict because subfields "x" conflict because "a" and "b" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
         locations: [
           { line: 3, column: 9 },
           { line: 4, column: 11 },
@@ -313,10 +331,8 @@ describe('Validate: Overlapping fields can be merged', () => {
       }
     `).to.deep.equal([
       {
-        message: fieldsConflictMessage('field', [
-          ['x', 'a and b are different fields'],
-          ['y', 'c and d are different fields'],
-        ]),
+        message:
+          'Fields "field" conflict because subfields "x" conflict because "a" and "b" are different fields and subfields "y" conflict because "c" and "d" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
         locations: [
           { line: 3, column: 9 },
           { line: 4, column: 11 },
@@ -345,9 +361,8 @@ describe('Validate: Overlapping fields can be merged', () => {
       }
     `).to.deep.equal([
       {
-        message: fieldsConflictMessage('field', [
-          ['deepField', [['x', 'a and b are different fields']]],
-        ]),
+        message:
+          'Fields "field" conflict because subfields "deepField" conflict because subfields "x" conflict because "a" and "b" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
         locations: [
           { line: 3, column: 9 },
           { line: 4, column: 11 },
@@ -379,9 +394,8 @@ describe('Validate: Overlapping fields can be merged', () => {
       }
     `).to.deep.equal([
       {
-        message: fieldsConflictMessage('deepField', [
-          ['x', 'a and b are different fields'],
-        ]),
+        message:
+          'Fields "deepField" conflict because subfields "x" conflict because "a" and "b" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
         locations: [
           { line: 4, column: 11 },
           { line: 5, column: 13 },
@@ -419,9 +433,8 @@ describe('Validate: Overlapping fields can be merged', () => {
       }
     `).to.deep.equal([
       {
-        message: fieldsConflictMessage('deeperField', [
-          ['x', 'a and b are different fields'],
-        ]),
+        message:
+          'Fields "deeperField" conflict because subfields "x" conflict because "a" and "b" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
         locations: [
           { line: 12, column: 11 },
           { line: 13, column: 13 },
@@ -458,10 +471,8 @@ describe('Validate: Overlapping fields can be merged', () => {
       }
     `).to.deep.equal([
       {
-        message: fieldsConflictMessage('field', [
-          ['x', 'a and b are different fields'],
-          ['y', 'c and d are different fields'],
-        ]),
+        message:
+          'Fields "field" conflict because subfields "x" conflict because "a" and "b" are different fields and subfields "y" conflict because "c" and "d" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
         locations: [
           { line: 3, column: 9 },
           { line: 11, column: 9 },
@@ -574,11 +585,12 @@ describe('Validate: Overlapping fields can be merged', () => {
         `,
       ).to.deep.equal([
         {
-          message: fieldsConflictMessage(
-            'scalar',
-            'they return conflicting types Int and String!',
-          ),
-          locations: [{ line: 5, column: 17 }, { line: 8, column: 17 }],
+          message:
+            'Fields "scalar" conflict because they return conflicting types "Int" and "String!". Use different aliases on the fields to fetch both if this was intentional.',
+          locations: [
+            { line: 5, column: 17 },
+            { line: 8, column: 17 },
+          ],
         },
       ]);
     });
@@ -625,11 +637,12 @@ describe('Validate: Overlapping fields can be merged', () => {
         `,
       ).to.deep.equal([
         {
-          message: fieldsConflictMessage(
-            'scalar',
-            'they return conflicting types Int and String',
-          ),
-          locations: [{ line: 5, column: 17 }, { line: 8, column: 17 }],
+          message:
+            'Fields "scalar" conflict because they return conflicting types "Int" and "String". Use different aliases on the fields to fetch both if this was intentional.',
+          locations: [
+            { line: 5, column: 17 },
+            { line: 8, column: 17 },
+          ],
         },
       ]);
     });
@@ -683,9 +696,8 @@ describe('Validate: Overlapping fields can be merged', () => {
         `,
       ).to.deep.equal([
         {
-          message: fieldsConflictMessage('other', [
-            ['scalar', 'scalar and unrelatedField are different fields'],
-          ]),
+          message:
+            'Fields "other" conflict because subfields "scalar" conflict because "scalar" and "unrelatedField" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
           locations: [
             { line: 31, column: 13 },
             { line: 39, column: 13 },
@@ -713,11 +725,12 @@ describe('Validate: Overlapping fields can be merged', () => {
         `,
       ).to.deep.equal([
         {
-          message: fieldsConflictMessage(
-            'scalar',
-            'they return conflicting types String! and String',
-          ),
-          locations: [{ line: 5, column: 17 }, { line: 8, column: 17 }],
+          message:
+            'Fields "scalar" conflict because they return conflicting types "String!" and "String". Use different aliases on the fields to fetch both if this was intentional.',
+          locations: [
+            { line: 5, column: 17 },
+            { line: 8, column: 17 },
+          ],
         },
       ]);
     });
@@ -743,11 +756,12 @@ describe('Validate: Overlapping fields can be merged', () => {
         `,
       ).to.deep.equal([
         {
-          message: fieldsConflictMessage(
-            'box',
-            'they return conflicting types [StringBox] and StringBox',
-          ),
-          locations: [{ line: 5, column: 17 }, { line: 10, column: 17 }],
+          message:
+            'Fields "box" conflict because they return conflicting types "[StringBox]" and "StringBox". Use different aliases on the fields to fetch both if this was intentional.',
+          locations: [
+            { line: 5, column: 17 },
+            { line: 10, column: 17 },
+          ],
         },
       ]);
 
@@ -771,11 +785,12 @@ describe('Validate: Overlapping fields can be merged', () => {
         `,
       ).to.deep.equal([
         {
-          message: fieldsConflictMessage(
-            'box',
-            'they return conflicting types StringBox and [StringBox]',
-          ),
-          locations: [{ line: 5, column: 17 }, { line: 10, column: 17 }],
+          message:
+            'Fields "box" conflict because they return conflicting types "StringBox" and "[StringBox]". Use different aliases on the fields to fetch both if this was intentional.',
+          locations: [
+            { line: 5, column: 17 },
+            { line: 10, column: 17 },
+          ],
         },
       ]);
     });
@@ -802,11 +817,12 @@ describe('Validate: Overlapping fields can be merged', () => {
         `,
       ).to.deep.equal([
         {
-          message: fieldsConflictMessage(
-            'val',
-            'scalar and unrelatedField are different fields',
-          ),
-          locations: [{ line: 6, column: 19 }, { line: 7, column: 19 }],
+          message:
+            'Fields "val" conflict because "scalar" and "unrelatedField" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
+          locations: [
+            { line: 6, column: 19 },
+            { line: 7, column: 19 },
+          ],
         },
       ]);
     });
@@ -832,9 +848,8 @@ describe('Validate: Overlapping fields can be merged', () => {
         `,
       ).to.deep.equal([
         {
-          message: fieldsConflictMessage('box', [
-            ['scalar', 'they return conflicting types String and Int'],
-          ]),
+          message:
+            'Fields "box" conflict because subfields "scalar" conflict because they return conflicting types "String" and "Int". Use different aliases on the fields to fetch both if this was intentional.',
           locations: [
             { line: 5, column: 17 },
             { line: 6, column: 19 },
@@ -881,7 +896,7 @@ describe('Validate: Overlapping fields can be merged', () => {
       );
     });
 
-    it('allows inline typeless fragments', () => {
+    it('allows inline fragments without type condition', () => {
       expectValidWithSchema(
         schema,
         `
@@ -920,9 +935,8 @@ describe('Validate: Overlapping fields can be merged', () => {
         `,
       ).to.deep.equal([
         {
-          message: fieldsConflictMessage('edges', [
-            ['node', [['id', 'name and id are different fields']]],
-          ]),
+          message:
+            'Fields "edges" conflict because subfields "node" conflict because subfields "id" conflict because "name" and "id" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
           locations: [
             { line: 5, column: 15 },
             { line: 6, column: 17 },
@@ -950,15 +964,6 @@ describe('Validate: Overlapping fields can be merged', () => {
             }
           }
         `,
-      );
-    });
-
-    it('error message contains hint for alias conflict', () => {
-      // The error template should end with a hint for the user to try using
-      // different aliases.
-      const error = fieldsConflictMessage('x', 'a and b are different fields');
-      expect(error).to.equal(
-        'Fields "x" conflict because a and b are different fields. Use different aliases on the fields to fetch both if this was intentional.',
       );
     });
 
@@ -1015,11 +1020,12 @@ describe('Validate: Overlapping fields can be merged', () => {
       }
     `).to.deep.equal([
       {
-        message: fieldsConflictMessage(
-          'fido',
-          'name and nickname are different fields',
-        ),
-        locations: [{ line: 4, column: 9 }, { line: 5, column: 9 }],
+        message:
+          'Fields "fido" conflict because "name" and "nickname" are different fields. Use different aliases on the fields to fetch both if this was intentional.',
+        locations: [
+          { line: 4, column: 9 },
+          { line: 5, column: 9 },
+        ],
       },
     ]);
   });

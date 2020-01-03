@@ -1,7 +1,7 @@
 // @flow strict
 
-import { type Source } from '../language/source';
 import { type Location } from '../language/ast';
+import { type Source } from '../language/source';
 import { type SourceLocation, getLocation } from '../language/location';
 
 /**
@@ -30,30 +30,52 @@ export function printSourceLocation(
 
   const columnOffset = sourceLocation.line === 1 ? firstLineColumnOffset : 0;
   const columnNum = sourceLocation.column + columnOffset;
+  const locationStr = `${source.name}:${lineNum}:${columnNum}\n`;
 
   const lines = body.split(/\r\n|[\n\r]/g);
+  const locationLine = lines[lineIndex];
+
+  // Special case for minified documents
+  if (locationLine.length > 120) {
+    const subLineIndex = Math.floor(columnNum / 80);
+    const subLineColumnNum = columnNum % 80;
+    const subLines = [];
+    for (let i = 0; i < locationLine.length; i += 80) {
+      subLines.push(locationLine.slice(i, i + 80));
+    }
+
+    return (
+      locationStr +
+      printPrefixedLines([
+        [`${lineNum}`, subLines[0]],
+        ...subLines.slice(1, subLineIndex + 1).map(subLine => ['', subLine]),
+        [' ', whitespace(subLineColumnNum - 1) + '^'],
+        ['', subLines[subLineIndex + 1]],
+      ])
+    );
+  }
+
   return (
-    `${source.name}:${lineNum}:${columnNum}\n` +
+    locationStr +
     printPrefixedLines([
       // Lines specified like this: ["prefix", "string"],
-      [`${lineNum - 1}: `, lines[lineIndex - 1]],
-      [`${lineNum}: `, lines[lineIndex]],
+      [`${lineNum - 1}`, lines[lineIndex - 1]],
+      [`${lineNum}`, locationLine],
       ['', whitespace(columnNum - 1) + '^'],
-      [`${lineNum + 1}: `, lines[lineIndex + 1]],
+      [`${lineNum + 1}`, lines[lineIndex + 1]],
     ])
   );
 }
 
-function printPrefixedLines(lines: Array<[string, string]>): string {
+function printPrefixedLines(lines: $ReadOnlyArray<[string, string]>): string {
   const existingLines = lines.filter(([_, line]) => line !== undefined);
 
-  let padLen = 0;
-  for (const [prefix] of existingLines) {
-    padLen = Math.max(padLen, prefix.length);
-  }
-
+  const padLen = Math.max(...existingLines.map(([prefix]) => prefix.length));
   return existingLines
-    .map(([prefix, line]) => lpad(padLen, prefix) + line)
+    .map(
+      ([prefix, line]) =>
+        leftPad(padLen, prefix) + (line ? ' | ' + line : ' |'),
+    )
     .join('\n');
 }
 
@@ -61,6 +83,6 @@ function whitespace(len: number): string {
   return Array(len + 1).join(' ');
 }
 
-function lpad(len: number, str: string): string {
+function leftPad(len: number, str: string): string {
   return whitespace(len - str.length) + str;
 }

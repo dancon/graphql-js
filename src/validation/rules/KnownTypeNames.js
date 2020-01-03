@@ -1,12 +1,10 @@
 // @flow strict
 
-import {
-  type ValidationContext,
-  type SDLValidationContext,
-} from '../ValidationContext';
-import { GraphQLError } from '../../error/GraphQLError';
-import suggestionList from '../../jsutils/suggestionList';
 import didYouMean from '../../jsutils/didYouMean';
+import suggestionList from '../../jsutils/suggestionList';
+
+import { GraphQLError } from '../../error/GraphQLError';
+
 import { type ASTNode } from '../../language/ast';
 import { type ASTVisitor } from '../../language/visitor';
 import {
@@ -14,17 +12,13 @@ import {
   isTypeSystemDefinitionNode,
   isTypeSystemExtensionNode,
 } from '../../language/predicates';
+
 import { specifiedScalarTypes } from '../../type/scalars';
 
-export function unknownTypeMessage(
-  typeName: string,
-  suggestedTypes: Array<string>,
-): string {
-  return (
-    `Unknown type "${typeName}".` +
-    didYouMean(suggestedTypes.map(x => `"${x}"`))
-  );
-}
+import {
+  type ValidationContext,
+  type SDLValidationContext,
+} from '../ValidationContext';
 
 /**
  * Known type names
@@ -54,7 +48,7 @@ export function KnownTypeNames(
       const typeName = node.name.value;
       if (!existingTypesMap[typeName] && !definedTypes[typeName]) {
         const definitionNode = ancestors[2] || parent;
-        const isSDL = isSDLNode(definitionNode);
+        const isSDL = definitionNode != null && isSDLNode(definitionNode);
         if (isSDL && isSpecifiedScalarName(typeName)) {
           return;
         }
@@ -64,7 +58,10 @@ export function KnownTypeNames(
           isSDL ? specifiedScalarsNames.concat(typeNames) : typeNames,
         );
         context.reportError(
-          new GraphQLError(unknownTypeMessage(typeName, suggestedTypes), node),
+          new GraphQLError(
+            `Unknown type "${typeName}".` + didYouMean(suggestedTypes),
+            node,
+          ),
         );
       }
     },
@@ -76,10 +73,9 @@ function isSpecifiedScalarName(typeName) {
   return specifiedScalarsNames.indexOf(typeName) !== -1;
 }
 
-function isSDLNode(value: ASTNode | $ReadOnlyArray<ASTNode> | void): boolean {
-  return Boolean(
-    value &&
-      !Array.isArray(value) &&
-      (isTypeSystemDefinitionNode(value) || isTypeSystemExtensionNode(value)),
+function isSDLNode(value: ASTNode | $ReadOnlyArray<ASTNode>): boolean {
+  return (
+    !Array.isArray(value) &&
+    (isTypeSystemDefinitionNode(value) || isTypeSystemExtensionNode(value))
   );
 }

@@ -38,9 +38,23 @@ const labelsConfig = {
 const GH_TOKEN = process.env['GH_TOKEN'];
 
 if (!GH_TOKEN) {
-  console.error('Must provide GH_TOKEN as enviroment variable!');
+  console.error('Must provide GH_TOKEN as environment variable!');
   process.exit(1);
 }
+
+if (!packageJSON.repository || typeof packageJSON.repository.url !== 'string') {
+  console.error('package.json is missing repository.url string!');
+  process.exit(1);
+}
+
+const repoURLMatch = /https:\/\/github.com\/([^/]+)\/([^/]+).git/.exec(
+  packageJSON.repository.url,
+);
+if (repoURLMatch == null) {
+  console.error('Cannot extract organization and repo name from repo URL!');
+  process.exit(1);
+}
+const [, githubOrg, githubRepo] = repoURLMatch;
 
 getChangeLog()
   .then(changelog => process.stdout.write(changelog))
@@ -59,23 +73,36 @@ function getChangeLog() {
   }
 
   const date = exec('git log -1 --format=%cd --date=short');
-  return getCommitsInfo(commitsList.split('\n')).then(commitsInfo =>
-    genChangeLog(tag, date, commitsInfo),
-  );
+  return getCommitsInfo(commitsList.split('\n'))
+    .then(commitsInfo => getPRsInfo(commitsInfoToPRs(commitsInfo)))
+    .then(prsInfo => genChangeLog(tag, date, prsInfo));
 }
 
-function genChangeLog(tag, date, commitsInfo) {
-  const allPRs = commitsInfoToPRs(commitsInfo);
+function genChangeLog(tag, date, allPRs) {
   const byLabel = {};
-  const commitersByLogin = {};
+  const committersByLogin = {};
 
   for (const pr of allPRs) {
-    if (!labelsConfig[pr.label]) {
-      throw new Error('Unknown label: ' + pr.label + pr.number);
+    const labels = pr.labels.nodes
+      .map(label => label.name)
+      .filter(label => label.startsWith('PR: '));
+
+    if (labels.length === 0) {
+      throw new Error(`PR is missing label. See ${pr.url}`);
     }
-    byLabel[pr.label] = byLabel[pr.label] || [];
-    byLabel[pr.label].push(pr);
-    commitersByLogin[pr.author.login] = pr.author;
+    if (labels.length > 1) {
+      throw new Error(
+        `PR has conflicting labels: ${labels.join('\n')}\nSee ${pr.url}`,
+      );
+    }
+
+    const label = labels[0];
+    if (!labelsConfig[label]) {
+      throw new Error(`Unknown label: ${label}. See ${pr.url}`);
+    }
+    byLabel[label] = byLabel[label] || [];
+    byLabel[label].push(pr);
+    committersByLogin[pr.author.login] = pr.author;
   }
 
   let changelog = `## ${tag || 'Unreleased'} (${date})\n`;
@@ -101,12 +128,12 @@ function genChangeLog(tag, date, commitsInfo) {
     }
   }
 
-  const commiters = Object.values(commitersByLogin).sort((a, b) =>
+  const committers = Object.values(committersByLogin).sort((a, b) =>
     (a.name || a.login).localeCompare(b.name || b.login),
   );
-  changelog += `\n#### Committers: ${commiters.length}\n`;
-  for (const commiter of commiters) {
-    changelog += `* ${commiter.name}([@${commiter.login}](${commiter.url}))\n`;
+  changelog += `\n#### Committers: ${committers.length}\n`;
+  for (const committer of committers) {
+    changelog += `* ${committer.name}([@${committer.login}](${committer.url}))\n`;
   }
 
   return changelog;
@@ -120,7 +147,7 @@ function graphqlRequestImpl(query, variables, cb) {
     headers: {
       Authorization: 'bearer ' + GH_TOKEN,
       'Content-Type': 'application/json',
-      'User-Agent': 'graphql-js-changelog',
+      'User-Agent': 'gen-changelog',
     },
   });
 
@@ -158,7 +185,7 @@ function graphqlRequestImpl(query, variables, cb) {
     });
   });
 
-  req.on('error', error => cb(error));
+  req.on('error', error => resultCB(error));
   req.write(JSON.stringify({ query, variables }));
   req.end();
 }
@@ -174,22 +201,8 @@ async function batchCommitInfo(commits) {
             associatedPullRequests(first: 10) {
               nodes {
                 number
-                title
-                url
-                author {
-                  login
-                  url
-                  ... on User {
-                    name
-                  }
-                }
                 repository {
                   nameWithOwner
-                }
-                labels(first: 10) {
-                  nodes {
-                    name
-                  }
                 }
               }
             }
@@ -200,7 +213,7 @@ async function batchCommitInfo(commits) {
 
   const response = await graphqlRequest(`
     {
-      repository(owner: "graphql", name: "graphql-js") {
+      repository(owner: "${githubOrg}", name: "${githubRepo}") {
         ${commitsSubQuery}
       }
     }
@@ -213,13 +226,57 @@ async function batchCommitInfo(commits) {
   return commitsInfo;
 }
 
+async function batchPRInfo(prs) {
+  let prsSubQuery = '';
+  for (const number of prs) {
+    prsSubQuery += `
+        pr_${number}: pullRequest(number: ${number}) {
+          number
+          title
+          url
+          author {
+            login
+            url
+            ... on User {
+              name
+            }
+          }
+          labels(first: 10) {
+            nodes {
+              name
+            }
+          }
+        }
+    `;
+  }
+
+  const response = await graphqlRequest(`
+    {
+      repository(owner: "${githubOrg}", name: "${githubRepo}") {
+        ${prsSubQuery}
+      }
+    }
+  `);
+
+  const prsInfo = [];
+  for (const number of prs) {
+    prsInfo.push(response.repository['pr_' + number]);
+  }
+  return prsInfo;
+}
+
 function commitsInfoToPRs(commits) {
-  const prs = [];
+  const prs = {};
   for (const commit of commits) {
     const associatedPRs = commit.associatedPullRequests.nodes.filter(
-      pr => pr.repository.nameWithOwner === 'graphql/graphql-js',
+      pr => pr.repository.nameWithOwner === `${githubOrg}/${githubRepo}`,
     );
     if (associatedPRs.length === 0) {
+      const match = / \(#([0-9]+)\)$/m.exec(commit.message);
+      if (match) {
+        prs[parseInt(match[1], 10)] = true;
+        continue;
+      }
       throw new Error(
         `Commit ${commit.oid} has no associated PR: ${commit.message}`,
       );
@@ -230,29 +287,21 @@ function commitsInfoToPRs(commits) {
       );
     }
 
-    const pr = associatedPRs[0];
-    const labels = pr.labels.nodes
-      .map(label => label.name)
-      .filter(label => label.startsWith('PR: '));
-
-    if (labels.length === 0) {
-      throw new Error(`PR #${pr.number} missing label`);
-    }
-    if (labels.length > 1) {
-      throw new Error(
-        `PR #${pr.number} has conflicting labels: ` + labels.join('\n'),
-      );
-    }
-    prs.push({
-      number: pr.number,
-      title: pr.title,
-      url: pr.url,
-      author: pr.author,
-      label: labels[0],
-    });
+    prs[associatedPRs[0].number] = true;
   }
 
-  return prs;
+  return Object.keys(prs);
+}
+
+async function getPRsInfo(commits) {
+  // Split pr into batches of 50 to prevent timeouts
+  const prInfoPromises = [];
+  for (let i = 0; i < commits.length; i += 50) {
+    const batch = commits.slice(i, i + 50);
+    prInfoPromises.push(batchPRInfo(batch));
+  }
+
+  return (await Promise.all(prInfoPromises)).flat();
 }
 
 async function getCommitsInfo(commits) {

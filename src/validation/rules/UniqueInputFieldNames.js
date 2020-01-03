@@ -1,12 +1,9 @@
 // @flow strict
 
-import { type ASTValidationContext } from '../ValidationContext';
 import { GraphQLError } from '../../error/GraphQLError';
 import { type ASTVisitor } from '../../language/visitor';
 
-export function duplicateInputFieldMessage(fieldName: string): string {
-  return `There can be only one input field named "${fieldName}".`;
-}
+import { type ASTValidationContext } from '../ValidationContext';
 
 /**
  * Unique input field names
@@ -34,10 +31,10 @@ export function UniqueInputFieldNames(
       const fieldName = node.name.value;
       if (knownNames[fieldName]) {
         context.reportError(
-          new GraphQLError(duplicateInputFieldMessage(fieldName), [
-            knownNames[fieldName],
-            node.name,
-          ]),
+          new GraphQLError(
+            `There can be only one input field named "${fieldName}".`,
+            [knownNames[fieldName], node.name],
+          ),
         );
       } else {
         knownNames[fieldName] = node.name;

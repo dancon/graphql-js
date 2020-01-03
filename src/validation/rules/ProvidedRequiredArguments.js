@@ -1,33 +1,21 @@
 // @flow strict
 
+import inspect from '../../jsutils/inspect';
+import keyMap from '../../jsutils/keyMap';
+
+import { GraphQLError } from '../../error/GraphQLError';
+
+import { Kind } from '../../language/kinds';
+import { print } from '../../language/printer';
+import { type ASTVisitor } from '../../language/visitor';
+
+import { specifiedDirectives } from '../../type/directives';
+import { isType, isRequiredArgument } from '../../type/definition';
+
 import {
   type ValidationContext,
   type SDLValidationContext,
 } from '../ValidationContext';
-import { GraphQLError } from '../../error/GraphQLError';
-import { Kind } from '../../language/kinds';
-import inspect from '../../jsutils/inspect';
-import keyMap from '../../jsutils/keyMap';
-import { isType, isRequiredArgument } from '../../type/definition';
-import { type ASTVisitor } from '../../language/visitor';
-import { print } from '../../language/printer';
-import { specifiedDirectives } from '../../type/directives';
-
-export function missingFieldArgMessage(
-  fieldName: string,
-  argName: string,
-  type: string,
-): string {
-  return `Field "${fieldName}" argument "${argName}" of type "${type}" is required, but it was not provided.`;
-}
-
-export function missingDirectiveArgMessage(
-  directiveName: string,
-  argName: string,
-  type: string,
-): string {
-  return `Directive "@${directiveName}" argument "${argName}" of type "${type}" is required, but it was not provided.`;
-}
 
 /**
  * Provided required arguments
@@ -53,13 +41,10 @@ export function ProvidedRequiredArguments(
         for (const argDef of fieldDef.args) {
           const argNode = argNodeMap[argDef.name];
           if (!argNode && isRequiredArgument(argDef)) {
+            const argTypeStr = inspect(argDef.type);
             context.reportError(
               new GraphQLError(
-                missingFieldArgMessage(
-                  fieldDef.name,
-                  argDef.name,
-                  inspect(argDef.type),
-                ),
+                `Field "${fieldDef.name}" argument "${argDef.name}" of type "${argTypeStr}" is required, but it was not provided.`,
                 fieldNode,
               ),
             );
@@ -70,7 +55,9 @@ export function ProvidedRequiredArguments(
   };
 }
 
-// @internal
+/**
+ * @internal
+ */
 export function ProvidedRequiredArgumentsOnDirectives(
   context: ValidationContext | SDLValidationContext,
 ): ASTVisitor {
@@ -109,13 +96,13 @@ export function ProvidedRequiredArgumentsOnDirectives(
           for (const argName of Object.keys(requiredArgs)) {
             if (!argNodeMap[argName]) {
               const argType = requiredArgs[argName].type;
+              const argTypeStr = isType(argType)
+                ? inspect(argType)
+                : print(argType);
+
               context.reportError(
                 new GraphQLError(
-                  missingDirectiveArgMessage(
-                    directiveName,
-                    argName,
-                    isType(argType) ? inspect(argType) : print(argType),
-                  ),
+                  `Directive "@${directiveName}" argument "${argName}" of type "${argTypeStr}" is required, but it was not provided.`,
                   directiveNode,
                 ),
               );

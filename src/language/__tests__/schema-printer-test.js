@@ -2,9 +2,12 @@
 
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
+
+import dedent from '../../jsutils/dedent';
+
 import { parse } from '../parser';
 import { print } from '../printer';
-import dedent from '../../jsutils/dedent';
+
 import { kitchenSinkSDL } from '../../__fixtures__';
 
 describe('Printer: SDL document', () => {
@@ -20,7 +23,7 @@ describe('Printer: SDL document', () => {
     const badAST = { random: 'Data' };
     // $DisableFlowOnNegativeTest
     expect(() => print(badAST)).to.throw(
-      'Invalid AST Node: { random: "Data" }',
+      'Invalid AST Node: { random: "Data" }.',
     );
   });
 
@@ -44,7 +47,7 @@ describe('Printer: SDL document', () => {
       This is a description
       of the \`Foo\` type.
       """
-      type Foo implements Bar & Baz {
+      type Foo implements Bar & Baz & Two {
         "Description of the \`one\` field."
         one: Type
         """This is a description of the \`two\` field."""
@@ -83,11 +86,17 @@ describe('Printer: SDL document', () => {
 
       interface UndefinedInterface
 
-      extend interface Bar {
+      extend interface Bar implements Two {
         two(argument: InputType!): Type
       }
 
       extend interface Bar @onInterface
+
+      interface Baz implements Bar & Two {
+        one: Type
+        two(argument: InputType!): Type
+        four(argument: String = "string"): String
+      }
 
       union Feed = Story | Article | Advert
 

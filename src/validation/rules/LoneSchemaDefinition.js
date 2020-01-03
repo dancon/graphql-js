@@ -1,16 +1,9 @@
 // @flow strict
 
-import { type SDLValidationContext } from '../ValidationContext';
 import { GraphQLError } from '../../error/GraphQLError';
 import { type ASTVisitor } from '../../language/visitor';
 
-export function schemaDefinitionNotAloneMessage(): string {
-  return 'Must provide only one schema definition.';
-}
-
-export function canNotDefineSchemaWithinExtensionMessage(): string {
-  return 'Cannot define a new schema within a schema extension.';
-}
+import { type SDLValidationContext } from '../ValidationContext';
 
 /**
  * Lone Schema definition
@@ -33,14 +26,17 @@ export function LoneSchemaDefinition(
     SchemaDefinition(node) {
       if (alreadyDefined) {
         context.reportError(
-          new GraphQLError(canNotDefineSchemaWithinExtensionMessage(), node),
+          new GraphQLError(
+            'Cannot define a new schema within a schema extension.',
+            node,
+          ),
         );
         return;
       }
 
       if (schemaDefinitionsCount > 0) {
         context.reportError(
-          new GraphQLError(schemaDefinitionNotAloneMessage(), node),
+          new GraphQLError('Must provide only one schema definition.', node),
         );
       }
       ++schemaDefinitionsCount;

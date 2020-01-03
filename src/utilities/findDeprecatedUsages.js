@@ -1,11 +1,14 @@
 // @flow strict
 
 import { GraphQLError } from '../error/GraphQLError';
-import { visit, visitWithTypeInfo } from '../language/visitor';
+
+import { visit } from '../language/visitor';
 import { type DocumentNode } from '../language/ast';
+
 import { getNamedType } from '../type/definition';
 import { type GraphQLSchema } from '../type/schema';
-import { TypeInfo } from './TypeInfo';
+
+import { TypeInfo, visitWithTypeInfo } from './TypeInfo';
 
 /**
  * A validation rule which reports deprecated usages.
@@ -30,8 +33,8 @@ export function findDeprecatedUsages(
             const reason = fieldDef.deprecationReason;
             errors.push(
               new GraphQLError(
-                `The field ${parentType.name}.${fieldDef.name} is deprecated.` +
-                  (reason ? ' ' + reason : ''),
+                `The field "${parentType.name}.${fieldDef.name}" is deprecated.` +
+                  (reason != null ? ' ' + reason : ''),
                 node,
               ),
             );
@@ -46,8 +49,8 @@ export function findDeprecatedUsages(
             const reason = enumVal.deprecationReason;
             errors.push(
               new GraphQLError(
-                `The enum value ${type.name}.${enumVal.name} is deprecated.` +
-                  (reason ? ' ' + reason : ''),
+                `The enum value "${type.name}.${enumVal.name}" is deprecated.` +
+                  (reason != null && reason !== '' ? ' ' + reason : ''),
                 node,
               ),
             );

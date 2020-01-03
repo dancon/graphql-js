@@ -1,23 +1,10 @@
 // @flow strict
 
-import { type SDLValidationContext } from '../ValidationContext';
 import { GraphQLError } from '../../error/GraphQLError';
 import { type ASTVisitor } from '../../language/visitor';
 import { isEnumType } from '../../type/definition';
 
-export function duplicateEnumValueNameMessage(
-  typeName: string,
-  valueName: string,
-): string {
-  return `Enum value "${typeName}.${valueName}" can only be defined once.`;
-}
-
-export function existedEnumValueNameMessage(
-  typeName: string,
-  valueName: string,
-): string {
-  return `Enum value "${typeName}.${valueName}" already exists in the schema. It cannot also be defined in this type extension.`;
-}
+import { type SDLValidationContext } from '../ValidationContext';
 
 /**
  * Unique enum value names
@@ -53,14 +40,14 @@ export function UniqueEnumValueNames(
         if (isEnumType(existingType) && existingType.getValue(valueName)) {
           context.reportError(
             new GraphQLError(
-              existedEnumValueNameMessage(typeName, valueName),
+              `Enum value "${typeName}.${valueName}" already exists in the schema. It cannot also be defined in this type extension.`,
               valueDef.name,
             ),
           );
         } else if (valueNames[valueName]) {
           context.reportError(
             new GraphQLError(
-              duplicateEnumValueNameMessage(typeName, valueName),
+              `Enum value "${typeName}.${valueName}" can only be defined once.`,
               [valueNames[valueName], valueDef.name],
             ),
           );

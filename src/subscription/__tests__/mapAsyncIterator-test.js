@@ -1,7 +1,11 @@
 // @flow strict
 
+// FIXME temporary hack until https://github.com/eslint/eslint/pull/12484 is merged
+/* eslint-disable require-await */
+
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
+
 import mapAsyncIterator from '../mapAsyncIterator';
 
 describe('mapAsyncIterator', () => {
@@ -63,7 +67,7 @@ describe('mapAsyncIterator', () => {
       done: true,
     });
 
-    // Subsequent nexts
+    // Subsequent next calls
     expect(await doubles.next()).to.deep.equal({
       value: undefined,
       done: true,
@@ -81,8 +85,8 @@ describe('mapAsyncIterator', () => {
         yield 2;
         yield 3;
       } finally {
-        yield 'done';
-        yield 'last';
+        yield 'Done';
+        yield 'Last';
       }
     }
 
@@ -93,13 +97,13 @@ describe('mapAsyncIterator', () => {
 
     // Early return
     expect(await doubles.return()).to.deep.equal({
-      value: 'donedone',
+      value: 'DoneDone',
       done: false,
     });
 
-    // Subsequent nexts may yield from finally block
+    // Subsequent next calls may yield from finally block
     expect(await doubles.next()).to.deep.equal({
-      value: 'lastlast',
+      value: 'LastLast',
       done: false,
     });
     expect(await doubles.next()).to.deep.equal({
@@ -156,8 +160,8 @@ describe('mapAsyncIterator', () => {
     expect(await doubles.next()).to.deep.equal({ value: 4, done: false });
 
     // Throw error
-    expect(await doubles.throw('ouch')).to.deep.equal({
-      value: 'ouchouch',
+    expect(await doubles.throw('Ouch')).to.deep.equal({
+      value: 'OuchOuch',
       done: false,
     });
 
@@ -199,7 +203,11 @@ describe('mapAsyncIterator', () => {
       throw new Error('Goodbye');
     }
 
-    const doubles = mapAsyncIterator(source(), x => x + x, error => error);
+    const doubles = mapAsyncIterator(
+      source(),
+      x => x + x,
+      error => error,
+    );
 
     expect(await doubles.next()).to.deep.equal({
       value: 'HelloHello',
@@ -265,12 +273,11 @@ describe('mapAsyncIterator', () => {
   });
 
   it('closes source if mapper rejects', async () => {
-    await testClosesSourceWithMapper(async x => {
-      if (x > 1) {
-        throw new Error('Cannot count to ' + x);
-      }
-      return x;
-    });
+    await testClosesSourceWithMapper(x =>
+      x > 1
+        ? Promise.reject(new Error('Cannot count to ' + x))
+        : Promise.resolve(x),
+    );
   });
 
   async function testClosesSourceWithRejectMapper(mapper) {
@@ -308,8 +315,8 @@ describe('mapAsyncIterator', () => {
   });
 
   it('closes source if mapper rejects', async () => {
-    await testClosesSourceWithRejectMapper(async error => {
-      throw new Error('Cannot count to ' + error.message);
-    });
+    await testClosesSourceWithRejectMapper(error =>
+      Promise.reject(new Error('Cannot count to ' + error.message)),
+    );
   });
 });

@@ -1,15 +1,26 @@
 // @flow strict
 
 import { expect } from 'chai';
+
 import inspect from '../../jsutils/inspect';
-import { parse } from '../../language';
-import { validate, validateSDL } from '../validate';
+
+import { parse } from '../../language/parser';
+
+import { GraphQLSchema } from '../../type/schema';
 import {
-  type ValidationRule,
-  type SDLValidationRule,
-} from '../ValidationContext';
+  GraphQLDirective,
+  GraphQLIncludeDirective,
+  GraphQLSkipDirective,
+} from '../../type/directives';
 import {
-  GraphQLSchema,
+  GraphQLInt,
+  GraphQLFloat,
+  GraphQLString,
+  GraphQLBoolean,
+  GraphQLID,
+} from '../../type/scalars';
+import {
+  GraphQLScalarType,
   GraphQLObjectType,
   GraphQLInterfaceType,
   GraphQLUnionType,
@@ -17,18 +28,13 @@ import {
   GraphQLInputObjectType,
   GraphQLList,
   GraphQLNonNull,
-  GraphQLInt,
-  GraphQLFloat,
-  GraphQLString,
-  GraphQLBoolean,
-  GraphQLID,
-} from '../../type';
+} from '../../type/definition';
+
+import { validate, validateSDL } from '../validate';
 import {
-  GraphQLDirective,
-  GraphQLIncludeDirective,
-  GraphQLSkipDirective,
-} from '../../type/directives';
-import { GraphQLScalarType } from '../../type/definition';
+  type ValidationRule,
+  type SDLValidationRule,
+} from '../ValidationContext';
 
 const Being = new GraphQLInterfaceType({
   name: 'Being',
@@ -40,8 +46,22 @@ const Being = new GraphQLInterfaceType({
   }),
 });
 
+const Mammal = new GraphQLInterfaceType({
+  name: 'Mammal',
+  interfaces: [],
+  fields: () => ({
+    mother: {
+      type: Mammal,
+    },
+    father: {
+      type: Mammal,
+    },
+  }),
+});
+
 const Pet = new GraphQLInterfaceType({
   name: 'Pet',
+  interfaces: [Being],
   fields: () => ({
     name: {
       type: GraphQLString,
@@ -52,10 +72,17 @@ const Pet = new GraphQLInterfaceType({
 
 const Canine = new GraphQLInterfaceType({
   name: 'Canine',
+  interfaces: [Mammal, Being],
   fields: () => ({
     name: {
       type: GraphQLString,
       args: { surname: { type: GraphQLBoolean } },
+    },
+    mother: {
+      type: Canine,
+    },
+    father: {
+      type: Canine,
     },
   }),
 });
@@ -71,6 +98,7 @@ const DogCommand = new GraphQLEnumType({
 
 const Dog = new GraphQLObjectType({
   name: 'Dog',
+  interfaces: [Being, Pet, Mammal, Canine],
   fields: () => ({
     name: {
       type: GraphQLString,
@@ -85,7 +113,7 @@ const Dog = new GraphQLObjectType({
         dogCommand: { type: DogCommand },
       },
     },
-    isHousetrained: {
+    isHouseTrained: {
       type: GraphQLBoolean,
       args: {
         atOtherHomes: {
@@ -98,8 +126,13 @@ const Dog = new GraphQLObjectType({
       type: GraphQLBoolean,
       args: { x: { type: GraphQLInt }, y: { type: GraphQLInt } },
     },
+    mother: {
+      type: Dog,
+    },
+    father: {
+      type: Dog,
+    },
   }),
-  interfaces: [Being, Pet, Canine],
 });
 
 const Cat = new GraphQLObjectType({

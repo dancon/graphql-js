@@ -1,13 +1,12 @@
 // @flow strict
 
 import { describe, it } from 'mocha';
-import { buildSchema } from '../../utilities';
+
+import { buildSchema } from '../../utilities/buildASTSchema';
+
+import { UniqueDirectiveNames } from '../rules/UniqueDirectiveNames';
+
 import { expectSDLValidationErrors } from './harness';
-import {
-  UniqueDirectiveNames,
-  existedDirectiveNameMessage,
-  duplicateDirectiveNameMessage,
-} from '../rules/UniqueDirectiveNames';
 
 function expectSDLErrors(sdlStr, schema) {
   return expectSDLValidationErrors(schema, UniqueDirectiveNames, sdlStr);
@@ -55,8 +54,11 @@ describe('Validate: Unique directive names', () => {
       directive @foo on SCHEMA
     `).to.deep.equal([
       {
-        message: duplicateDirectiveNameMessage('foo'),
-        locations: [{ line: 2, column: 18 }, { line: 4, column: 18 }],
+        message: 'There can be only one directive named "@foo".',
+        locations: [
+          { line: 2, column: 18 },
+          { line: 4, column: 18 },
+        ],
       },
     ]);
   });
@@ -72,7 +74,8 @@ describe('Validate: Unique directive names', () => {
 
     expectSDLErrors('directive @skip on SCHEMA', schema).to.deep.equal([
       {
-        message: existedDirectiveNameMessage('skip'),
+        message:
+          'Directive "@skip" already exists in the schema. It cannot be redefined.',
         locations: [{ line: 1, column: 12 }],
       },
     ]);
@@ -89,7 +92,8 @@ describe('Validate: Unique directive names', () => {
 
     expectSDLErrors('directive @foo on SCHEMA', schema).to.deep.equal([
       {
-        message: existedDirectiveNameMessage('foo'),
+        message:
+          'Directive "@foo" already exists in the schema. It cannot be redefined.',
         locations: [{ line: 1, column: 12 }],
       },
     ]);

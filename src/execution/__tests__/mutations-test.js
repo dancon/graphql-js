@@ -2,9 +2,14 @@
 
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
+
+import { parse } from '../../language/parser';
+
+import { GraphQLInt } from '../../type/scalars';
+import { GraphQLSchema } from '../../type/schema';
+import { GraphQLObjectType } from '../../type/definition';
+
 import { execute } from '../execute';
-import { parse } from '../../language';
-import { GraphQLSchema, GraphQLObjectType, GraphQLInt } from '../../type';
 
 class NumberHolder {
   theNumber: number;
@@ -39,7 +44,7 @@ class Root {
   }
 
   promiseAndFailToChangeTheNumber(): Promise<NumberHolder> {
-    return new Promise((resolve, reject) => {
+    return new Promise((_resolve, reject) => {
       process.nextTick(() => {
         reject(new Error('Cannot change the number'));
       });
@@ -53,6 +58,7 @@ const numberHolderType = new GraphQLObjectType({
   },
   name: 'NumberHolder',
 });
+
 const schema = new GraphQLSchema({
   query: new GraphQLObjectType({
     fields: {
@@ -97,25 +103,28 @@ const schema = new GraphQLSchema({
 
 describe('Execute: Handles mutation execution ordering', () => {
   it('evaluates mutations serially', async () => {
-    const doc = `mutation M {
-      first: immediatelyChangeTheNumber(newNumber: 1) {
-        theNumber
-      },
-      second: promiseToChangeTheNumber(newNumber: 2) {
-        theNumber
-      },
-      third: immediatelyChangeTheNumber(newNumber: 3) {
-        theNumber
+    const document = parse(`
+      mutation M {
+        first: immediatelyChangeTheNumber(newNumber: 1) {
+          theNumber
+        },
+        second: promiseToChangeTheNumber(newNumber: 2) {
+          theNumber
+        },
+        third: immediatelyChangeTheNumber(newNumber: 3) {
+          theNumber
+        }
+        fourth: promiseToChangeTheNumber(newNumber: 4) {
+          theNumber
+        },
+        fifth: immediatelyChangeTheNumber(newNumber: 5) {
+          theNumber
+        }
       }
-      fourth: promiseToChangeTheNumber(newNumber: 4) {
-        theNumber
-      },
-      fifth: immediatelyChangeTheNumber(newNumber: 5) {
-        theNumber
-      }
-    }`;
+    `);
 
-    const mutationResult = await execute(schema, parse(doc), new Root(6));
+    const rootValue = new Root(6);
+    const mutationResult = await execute({ schema, document, rootValue });
 
     expect(mutationResult).to.deep.equal({
       data: {
@@ -129,28 +138,31 @@ describe('Execute: Handles mutation execution ordering', () => {
   });
 
   it('evaluates mutations correctly in the presence of a failed mutation', async () => {
-    const doc = `mutation M {
-      first: immediatelyChangeTheNumber(newNumber: 1) {
-        theNumber
-      },
-      second: promiseToChangeTheNumber(newNumber: 2) {
-        theNumber
-      },
-      third: failToChangeTheNumber(newNumber: 3) {
-        theNumber
+    const document = parse(`
+      mutation M {
+        first: immediatelyChangeTheNumber(newNumber: 1) {
+          theNumber
+        },
+        second: promiseToChangeTheNumber(newNumber: 2) {
+          theNumber
+        },
+        third: failToChangeTheNumber(newNumber: 3) {
+          theNumber
+        }
+        fourth: promiseToChangeTheNumber(newNumber: 4) {
+          theNumber
+        },
+        fifth: immediatelyChangeTheNumber(newNumber: 5) {
+          theNumber
+        }
+        sixth: promiseAndFailToChangeTheNumber(newNumber: 6) {
+          theNumber
+        }
       }
-      fourth: promiseToChangeTheNumber(newNumber: 4) {
-        theNumber
-      },
-      fifth: immediatelyChangeTheNumber(newNumber: 5) {
-        theNumber
-      }
-      sixth: promiseAndFailToChangeTheNumber(newNumber: 6) {
-        theNumber
-      }
-    }`;
+    `);
 
-    const result = await execute(schema, parse(doc), new Root(6));
+    const rootValue = new Root(6);
+    const result = await execute({ schema, document, rootValue });
 
     expect(result).to.deep.equal({
       data: {
@@ -164,12 +176,12 @@ describe('Execute: Handles mutation execution ordering', () => {
       errors: [
         {
           message: 'Cannot change the number',
-          locations: [{ line: 8, column: 7 }],
+          locations: [{ line: 9, column: 9 }],
           path: ['third'],
         },
         {
           message: 'Cannot change the number',
-          locations: [{ line: 17, column: 7 }],
+          locations: [{ line: 18, column: 9 }],
           path: ['sixth'],
         },
       ],

@@ -1,25 +1,17 @@
 // @flow strict
 
+import { GraphQLError } from '../../error/GraphQLError';
+
+import { Kind } from '../../language/kinds';
+import { type ASTVisitor } from '../../language/visitor';
+import { DirectiveLocation } from '../../language/directiveLocation';
+
+import { specifiedDirectives } from '../../type/directives';
+
 import {
   type ValidationContext,
   type SDLValidationContext,
 } from '../ValidationContext';
-import { GraphQLError } from '../../error/GraphQLError';
-import { Kind } from '../../language/kinds';
-import { DirectiveLocation } from '../../language/directiveLocation';
-import { type ASTVisitor } from '../../language/visitor';
-import { specifiedDirectives } from '../../type/directives';
-
-export function unknownDirectiveMessage(directiveName: string): string {
-  return `Unknown directive "${directiveName}".`;
-}
-
-export function misplacedDirectiveMessage(
-  directiveName: string,
-  location: string,
-): string {
-  return `Directive "${directiveName}" may not be used on ${location}.`;
-}
 
 /**
  * Known directives
@@ -48,21 +40,22 @@ export function KnownDirectives(
   }
 
   return {
-    Directive(node, key, parent, path, ancestors) {
+    Directive(node, _key, _parent, _path, ancestors) {
       const name = node.name.value;
       const locations = locationsMap[name];
 
       if (!locations) {
         context.reportError(
-          new GraphQLError(unknownDirectiveMessage(name), node),
+          new GraphQLError(`Unknown directive "@${name}".`, node),
         );
         return;
       }
+
       const candidateLocation = getDirectiveLocationForASTPath(ancestors);
       if (candidateLocation && locations.indexOf(candidateLocation) === -1) {
         context.reportError(
           new GraphQLError(
-            misplacedDirectiveMessage(name, candidateLocation),
+            `Directive "@${name}" may not be used on ${candidateLocation}.`,
             node,
           ),
         );

@@ -2,16 +2,18 @@
 
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
-import { execute } from '../execute';
-import { parse } from '../../language';
+
+import { parse } from '../../language/parser';
+
+import { GraphQLSchema } from '../../type/schema';
+import { GraphQLString, GraphQLInt } from '../../type/scalars';
 import {
-  GraphQLSchema,
-  GraphQLObjectType,
-  GraphQLString,
-  GraphQLInt,
   GraphQLList,
   GraphQLNonNull,
-} from '../../type';
+  GraphQLObjectType,
+} from '../../type/definition';
+
+import { execute } from '../execute';
 
 // resolved() is shorthand for Promise.resolve()
 const resolved = Promise.resolve.bind(Promise);
@@ -37,11 +39,11 @@ function check(testType, testData, expected) {
       }),
     });
 
-    const schema = new GraphQLSchema({ query: dataType });
-
-    const ast = parse('{ nest { test } }');
-
-    const response = await execute(schema, ast, data);
+    const response = await execute({
+      schema: new GraphQLSchema({ query: dataType }),
+      document: parse('{ nest { test } }'),
+      contextValue: { test: testData },
+    });
     expect(response).to.deep.equal(expected);
   };
 }
@@ -69,8 +71,8 @@ describe('Execute: Accepts any iterable as list value', () => {
     }),
   );
 
-  function getArgs(..._args) {
-    return arguments;
+  function getArgs(...args) {
+    return args;
   }
 
   it(
@@ -87,7 +89,7 @@ describe('Execute: Accepts any iterable as list value', () => {
       errors: [
         {
           message:
-            'Expected Iterable, but did not find one for field DataType.test.',
+            'Expected Iterable, but did not find one for field "DataType.test".',
           locations: [{ line: 1, column: 10 }],
           path: ['nest', 'test'],
         },

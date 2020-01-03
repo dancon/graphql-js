@@ -2,20 +2,23 @@
 
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
+
 import inspect from '../../jsutils/inspect';
 import invariant from '../../jsutils/invariant';
-import { execute } from '../execute';
-import { Kind, parse } from '../../language';
+
+import { Kind } from '../../language/kinds';
+import { parse } from '../../language/parser';
+
+import { GraphQLSchema } from '../../type/schema';
+import { GraphQLInt, GraphQLBoolean, GraphQLString } from '../../type/scalars';
 import {
-  GraphQLSchema,
+  GraphQLList,
+  GraphQLNonNull,
   GraphQLInterfaceType,
   GraphQLObjectType,
-  GraphQLList,
-  GraphQLBoolean,
-  GraphQLInt,
-  GraphQLString,
-  GraphQLNonNull,
-} from '../../type';
+} from '../../type/definition';
+
+import { execute } from '../execute';
 
 describe('Execute: Handles basic execution tasks', () => {
   it('throws if no document is provided', () => {
@@ -29,7 +32,7 @@ describe('Execute: Handles basic execution tasks', () => {
     });
 
     // $DisableFlowOnNegativeTest
-    expect(() => execute({ schema })).to.throw('Must provide document');
+    expect(() => execute({ schema })).to.throw('Must provide document.');
   });
 
   it('throws if no schema is provided', () => {
@@ -536,7 +539,7 @@ describe('Execute: Handles basic execution tasks', () => {
               }),
             ),
             resolve() {
-              return Promise.reject(new Error('Dangit'));
+              return Promise.reject(new Error('Oops'));
             },
           },
         },
@@ -558,7 +561,7 @@ describe('Execute: Handles basic execution tasks', () => {
       errors: [
         {
           locations: [{ column: 9, line: 3 }],
-          message: 'Dangit',
+          message: 'Oops',
           path: ['foods'],
         },
       ],
@@ -745,6 +748,24 @@ describe('Execute: Handles basic execution tasks', () => {
     });
   });
 
+  it('errors if empty string is provided as operation name', () => {
+    const schema = new GraphQLSchema({
+      query: new GraphQLObjectType({
+        name: 'Type',
+        fields: {
+          a: { type: GraphQLString },
+        },
+      }),
+    });
+    const document = parse('{ a }');
+    const operationName = '';
+
+    const result = execute({ schema, document, operationName });
+    expect(result).to.deep.equal({
+      errors: [{ message: 'Unknown operation named "".' }],
+    });
+  });
+
   it('uses the query schema for queries', () => {
     const schema = new GraphQLSchema({
       query: new GraphQLObjectType({
@@ -911,7 +932,7 @@ describe('Execute: Handles basic execution tasks', () => {
         fields: {
           field: {
             type: GraphQLString,
-            resolve: (data, args) => inspect(args),
+            resolve: (_source, args) => inspect(args),
             args: {
               a: { type: GraphQLBoolean },
               b: { type: GraphQLBoolean },
@@ -1017,7 +1038,7 @@ describe('Execute: Handles basic execution tasks', () => {
     });
     const document = parse('{ foo }');
 
-    function fieldResolver(source, args, context, info) {
+    function fieldResolver(_source, _args, _context, info) {
       // For the purposes of test, just return the name of the field!
       return info.fieldName;
     }
@@ -1055,7 +1076,7 @@ describe('Execute: Handles basic execution tasks', () => {
     });
 
     let possibleTypes;
-    function typeResolver(source, context, info, abstractType) {
+    function typeResolver(_source, _context, info, abstractType) {
       // Resolver should be able to figure out all possible types on its own
       possibleTypes = info.schema.getPossibleTypes(abstractType);
 

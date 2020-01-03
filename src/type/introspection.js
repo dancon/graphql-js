@@ -1,11 +1,20 @@
 // @flow strict
 
 import objectValues from '../polyfills/objectValues';
+
 import inspect from '../jsutils/inspect';
-import { astFromValue } from '../utilities/astFromValue';
+import invariant from '../jsutils/invariant';
+
 import { print } from '../language/printer';
+import { DirectiveLocation } from '../language/directiveLocation';
+import { astFromValue } from '../utilities/astFromValue';
+
+import { type GraphQLSchema } from './schema';
+import { type GraphQLDirective } from './directives';
+import { GraphQLString, GraphQLBoolean } from './scalars';
 import {
   type GraphQLType,
+  type GraphQLNamedType,
   type GraphQLInputField,
   type GraphQLEnumValue,
   type GraphQLField,
@@ -23,12 +32,7 @@ import {
   isListType,
   isNonNullType,
   isAbstractType,
-  isNamedType,
 } from './definition';
-import { type GraphQLSchema } from './schema';
-import { type GraphQLDirective } from './directives';
-import { GraphQLString, GraphQLBoolean } from './scalars';
-import { DirectiveLocation } from '../language/directiveLocation';
 
 export const __Schema = new GraphQLObjectType({
   name: '__Schema',
@@ -205,8 +209,7 @@ export const __Type = new GraphQLObjectType({
           }
 
           // Not reachable. All possible types have been considered.
-          /* istanbul ignore next */
-          throw new Error(`Unexpected type: "${inspect((type: empty))}".`);
+          invariant(false, `Unexpected type: "${inspect((type: empty))}".`);
         },
       },
       name: {
@@ -237,14 +240,14 @@ export const __Type = new GraphQLObjectType({
       interfaces: {
         type: GraphQLList(GraphQLNonNull(__Type)),
         resolve(type) {
-          if (isObjectType(type)) {
+          if (isObjectType(type) || isInterfaceType(type)) {
             return type.getInterfaces();
           }
         },
       },
       possibleTypes: {
         type: GraphQLList(GraphQLNonNull(__Type)),
-        resolve(type, args, context, { schema }) {
+        resolve(type, _args, _context, { schema }) {
           if (isAbstractType(type)) {
             return schema.getPossibleTypes(type);
           }
@@ -395,7 +398,7 @@ export const __TypeKind = new GraphQLEnumType({
     INTERFACE: {
       value: TypeKind.INTERFACE,
       description:
-        'Indicates this type is an interface. `fields` and `possibleTypes` are valid fields.',
+        'Indicates this type is an interface. `fields`, `interfaces`, and `possibleTypes` are valid fields.',
     },
     UNION: {
       value: TypeKind.UNION,
@@ -434,15 +437,30 @@ export const SchemaMetaFieldDef: GraphQLField<mixed, mixed> = {
   type: GraphQLNonNull(__Schema),
   description: 'Access the current type schema of this server.',
   args: [],
-  resolve: (source, args, context, { schema }) => schema,
+  resolve: (_source, _args, _context, { schema }) => schema,
+  deprecationReason: undefined,
+  extensions: undefined,
+  astNode: undefined,
 };
 
 export const TypeMetaFieldDef: GraphQLField<mixed, mixed> = {
   name: '__type',
   type: __Type,
   description: 'Request the type information of a single type.',
-  args: [{ name: 'name', type: GraphQLNonNull(GraphQLString) }],
-  resolve: (source, { name }, context, { schema }) => schema.getType(name),
+  args: [
+    {
+      name: 'name',
+      description: undefined,
+      type: GraphQLNonNull(GraphQLString),
+      defaultValue: undefined,
+      extensions: undefined,
+      astNode: undefined,
+    },
+  ],
+  resolve: (_source, { name }, _context, { schema }) => schema.getType(name),
+  deprecationReason: undefined,
+  extensions: undefined,
+  astNode: undefined,
 };
 
 export const TypeNameMetaFieldDef: GraphQLField<mixed, mixed> = {
@@ -450,7 +468,10 @@ export const TypeNameMetaFieldDef: GraphQLField<mixed, mixed> = {
   type: GraphQLNonNull(GraphQLString),
   description: 'The name of the current Object type at runtime.',
   args: [],
-  resolve: (source, args, context, { parentType }) => parentType.name,
+  resolve: (_source, _args, _context, { parentType }) => parentType.name,
+  deprecationReason: undefined,
+  extensions: undefined,
+  astNode: undefined,
 };
 
 export const introspectionTypes = Object.freeze([
@@ -464,9 +485,6 @@ export const introspectionTypes = Object.freeze([
   __TypeKind,
 ]);
 
-export function isIntrospectionType(type: mixed): boolean %checks {
-  return (
-    isNamedType(type) &&
-    introspectionTypes.some(({ name }) => type.name === name)
-  );
+export function isIntrospectionType(type: GraphQLNamedType): boolean %checks {
+  return introspectionTypes.some(({ name }) => type.name === name);
 }

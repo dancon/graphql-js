@@ -1,11 +1,13 @@
 // @flow strict
 
-import { describe, it } from 'mocha';
 import { expect } from 'chai';
+import { describe, it } from 'mocha';
 
 import inspect from '../../jsutils/inspect';
 import identityFunc from '../../jsutils/identityFunc';
+
 import { parseValue } from '../../language/parser';
+
 import {
   type GraphQLType,
   type GraphQLNullableType,
@@ -35,7 +37,7 @@ const InputObjectType = new GraphQLInputObjectType({
 const ListOfScalarsType = GraphQLList(ScalarType);
 const NonNullScalarType = GraphQLNonNull(ScalarType);
 const ListOfNonNullScalarsType = GraphQLList(NonNullScalarType);
-const NonNullListofScalars = GraphQLNonNull(ListOfScalarsType);
+const NonNullListOfScalars = GraphQLNonNull(ListOfScalarsType);
 
 describe('Type System: Scalars', () => {
   it('accepts a Scalar type defining serialize', () => {
@@ -181,15 +183,23 @@ describe('Type System: Objects', () => {
           type: ScalarType,
           deprecationReason: 'A terrible reason',
         },
+        baz: {
+          type: ScalarType,
+          deprecationReason: '',
+        },
       },
     });
 
-    expect(TypeWithDeprecatedField.getFields().bar).to.deep.equal({
-      type: ScalarType,
-      deprecationReason: 'A terrible reason',
-      isDeprecated: true,
+    expect(TypeWithDeprecatedField.getFields().bar).to.include({
       name: 'bar',
-      args: [],
+      isDeprecated: true,
+      deprecationReason: 'A terrible reason',
+    });
+
+    expect(TypeWithDeprecatedField.getFields().baz).to.include({
+      name: 'baz',
+      isDeprecated: true,
+      deprecationReason: '',
     });
   });
 
@@ -201,7 +211,18 @@ describe('Type System: Objects', () => {
       }),
     });
     expect(objType.getFields()).to.deep.equal({
-      f: { name: 'f', type: ScalarType, args: [], isDeprecated: false },
+      f: {
+        name: 'f',
+        description: undefined,
+        type: ScalarType,
+        args: [],
+        resolve: undefined,
+        subscribe: undefined,
+        isDeprecated: false,
+        deprecationReason: undefined,
+        extensions: undefined,
+        astNode: undefined,
+      },
     });
   });
 
@@ -220,17 +241,24 @@ describe('Type System: Objects', () => {
     expect(objType.getFields()).to.deep.equal({
       f: {
         name: 'f',
+        description: undefined,
         type: ScalarType,
         args: [
           {
             name: 'arg',
+            description: undefined,
             type: ScalarType,
-            description: null,
             defaultValue: undefined,
+            extensions: undefined,
             astNode: undefined,
           },
         ],
+        resolve: undefined,
+        subscribe: undefined,
         isDeprecated: false,
+        deprecationReason: undefined,
+        extensions: undefined,
+        astNode: undefined,
       },
     });
   });
@@ -275,7 +303,7 @@ describe('Type System: Objects', () => {
       },
     });
     expect(() => objType.getFields()).to.throw(
-      'SomeObject.f field config must be an object',
+      'SomeObject.f field config must be an object.',
     );
   });
 
@@ -413,6 +441,50 @@ describe('Type System: Interfaces', () => {
     ).not.to.throw();
   });
 
+  it('accepts an Interface type with an array of interfaces', () => {
+    const implementing = new GraphQLInterfaceType({
+      name: 'AnotherInterface',
+      fields: {},
+      interfaces: [InterfaceType],
+    });
+    expect(implementing.getInterfaces()).to.deep.equal([InterfaceType]);
+  });
+
+  it('accepts an Interface type with interfaces as a function returning an array', () => {
+    const implementing = new GraphQLInterfaceType({
+      name: 'AnotherInterface',
+      fields: {},
+      interfaces: () => [InterfaceType],
+    });
+    expect(implementing.getInterfaces()).to.deep.equal([InterfaceType]);
+  });
+
+  it('rejects an Interface type with incorrectly typed interfaces', () => {
+    const objType = new GraphQLInterfaceType({
+      name: 'AnotherInterface',
+      fields: {},
+      // $DisableFlowOnNegativeTest
+      interfaces: {},
+    });
+    expect(() => objType.getInterfaces()).to.throw(
+      'AnotherInterface interfaces must be an Array or a function which returns an Array.',
+    );
+  });
+
+  it('rejects an Interface type with interfaces as a function returning an incorrect type', () => {
+    const objType = new GraphQLInterfaceType({
+      name: 'AnotherInterface',
+      fields: {},
+      // $DisableFlowOnNegativeTest
+      interfaces() {
+        return {};
+      },
+    });
+    expect(() => objType.getInterfaces()).to.throw(
+      'AnotherInterface interfaces must be an Array or a function which returns an Array.',
+    );
+  });
+
   it('rejects an Interface type with an incorrect type for resolveType', () => {
     expect(
       () =>
@@ -494,16 +566,22 @@ describe('Type System: Enums', () => {
   it('defines an enum type with deprecated value', () => {
     const EnumTypeWithDeprecatedValue = new GraphQLEnumType({
       name: 'EnumWithDeprecatedValue',
-      values: { foo: { deprecationReason: 'Just because' } },
+      values: {
+        foo: { deprecationReason: 'Just because' },
+        bar: { deprecationReason: '' },
+      },
     });
 
-    expect(EnumTypeWithDeprecatedValue.getValues()[0]).to.deep.equal({
+    expect(EnumTypeWithDeprecatedValue.getValues()[0]).to.include({
       name: 'foo',
-      description: undefined,
       isDeprecated: true,
       deprecationReason: 'Just because',
-      value: 'foo',
-      astNode: undefined,
+    });
+
+    expect(EnumTypeWithDeprecatedValue.getValues()[1]).to.include({
+      name: 'bar',
+      isDeprecated: true,
+      deprecationReason: '',
     });
   });
 
@@ -512,7 +590,8 @@ describe('Type System: Enums', () => {
       name: 'EnumWithNullishValue',
       values: {
         NULL: { value: null },
-        UNDEFINED: { value: undefined },
+        NAN: { value: NaN },
+        NO_CUSTOM_VALUE: { value: undefined },
       },
     });
 
@@ -520,17 +599,28 @@ describe('Type System: Enums', () => {
       {
         name: 'NULL',
         description: undefined,
+        value: null,
         isDeprecated: false,
         deprecationReason: undefined,
-        value: null,
+        extensions: undefined,
         astNode: undefined,
       },
       {
-        name: 'UNDEFINED',
+        name: 'NAN',
         description: undefined,
+        value: NaN,
         isDeprecated: false,
         deprecationReason: undefined,
-        value: undefined,
+        extensions: undefined,
+        astNode: undefined,
+      },
+      {
+        name: 'NO_CUSTOM_VALUE',
+        description: undefined,
+        value: 'NO_CUSTOM_VALUE',
+        isDeprecated: false,
+        deprecationReason: undefined,
+        extensions: undefined,
         astNode: undefined,
       },
     ]);
@@ -623,7 +713,14 @@ describe('Type System: Input Objects', () => {
         },
       });
       expect(inputObjType.getFields()).to.deep.equal({
-        f: { name: 'f', type: ScalarType },
+        f: {
+          name: 'f',
+          description: undefined,
+          type: ScalarType,
+          defaultValue: undefined,
+          extensions: undefined,
+          astNode: undefined,
+        },
       });
     });
 
@@ -635,7 +732,14 @@ describe('Type System: Input Objects', () => {
         }),
       });
       expect(inputObjType.getFields()).to.deep.equal({
-        f: { name: 'f', type: ScalarType },
+        f: {
+          name: 'f',
+          description: undefined,
+          type: ScalarType,
+          defaultValue: undefined,
+          extensions: undefined,
+          astNode: undefined,
+        },
       });
     });
 
@@ -770,7 +874,7 @@ describe('Type System: test utility methods', () => {
 
     expect(String(NonNullScalarType)).to.equal('Scalar!');
     expect(String(ListOfScalarsType)).to.equal('[Scalar]');
-    expect(String(NonNullListofScalars)).to.equal('[Scalar]!');
+    expect(String(NonNullListOfScalars)).to.equal('[Scalar]!');
     expect(String(ListOfNonNullScalarsType)).to.equal('[Scalar!]');
     expect(String(GraphQLList(ListOfScalarsType))).to.equal('[[Scalar]]');
   });
@@ -785,7 +889,7 @@ describe('Type System: test utility methods', () => {
 
     expect(JSON.stringify(NonNullScalarType)).to.equal('"Scalar!"');
     expect(JSON.stringify(ListOfScalarsType)).to.equal('"[Scalar]"');
-    expect(JSON.stringify(NonNullListofScalars)).to.equal('"[Scalar]!"');
+    expect(JSON.stringify(NonNullListOfScalars)).to.equal('"[Scalar]!"');
     expect(JSON.stringify(ListOfNonNullScalarsType)).to.equal('"[Scalar!]"');
     expect(JSON.stringify(GraphQLList(ListOfScalarsType))).to.equal(
       '"[[Scalar]]"',

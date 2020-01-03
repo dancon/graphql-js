@@ -1,8 +1,8 @@
 // @flow strict
 
 import inspect from '../jsutils/inspect';
-import { type ASTNode, type ASTKindToNode } from './ast';
-import { type TypeInfo } from '../utilities/TypeInfo';
+
+import { type ASTNode, type ASTKindToNode, isNode } from './ast';
 
 /**
  * A visitor is provided to visit, it contains the collection of
@@ -111,7 +111,13 @@ export const QueryDocumentKeys = {
     'defaultValue',
     'directives',
   ],
-  InterfaceTypeDefinition: ['description', 'name', 'directives', 'fields'],
+  InterfaceTypeDefinition: [
+    'description',
+    'name',
+    'interfaces',
+    'directives',
+    'fields',
+  ],
   UnionTypeDefinition: ['description', 'name', 'directives', 'types'],
   EnumTypeDefinition: ['description', 'name', 'directives', 'values'],
   EnumValueDefinition: ['description', 'name', 'directives'],
@@ -123,7 +129,7 @@ export const QueryDocumentKeys = {
 
   ScalarTypeExtension: ['name', 'directives'],
   ObjectTypeExtension: ['name', 'interfaces', 'directives', 'fields'],
-  InterfaceTypeExtension: ['name', 'directives', 'fields'],
+  InterfaceTypeExtension: ['name', 'interfaces', 'directives', 'fields'],
   UnionTypeExtension: ['name', 'directives', 'types'],
   EnumTypeExtension: ['name', 'directives', 'values'],
   InputObjectTypeExtension: ['name', 'directives', 'fields'],
@@ -288,7 +294,7 @@ export function visit(
     let result;
     if (!Array.isArray(node)) {
       if (!isNode(node)) {
-        throw new Error('Invalid AST Node: ' + inspect(node));
+        throw new Error(`Invalid AST Node: ${inspect(node)}.`);
       }
       const visitFn = getVisitFn(visitor, node.kind, isLeaving);
       if (visitFn) {
@@ -343,10 +349,6 @@ export function visit(
   return newRoot;
 }
 
-function isNode(maybeNode): boolean %checks {
-  return Boolean(maybeNode && typeof maybeNode.kind === 'string');
-}
-
 /**
  * Creates a new visitor instance which delegates to many visitors to run in
  * parallel. Each visitor will be visited for each node before moving on.
@@ -354,7 +356,7 @@ function isNode(maybeNode): boolean %checks {
  * If a prior visitor edits a node, no following visitors will see that node.
  */
 export function visitInParallel(
-  visitors: Array<Visitor<ASTKindToNode>>,
+  visitors: $ReadOnlyArray<Visitor<ASTKindToNode>>,
 ): Visitor<ASTKindToNode> {
   const skipping = new Array(visitors.length);
 
@@ -392,41 +394,6 @@ export function visitInParallel(
           skipping[i] = null;
         }
       }
-    },
-  };
-}
-
-/**
- * Creates a new visitor instance which maintains a provided TypeInfo instance
- * along with visiting visitor.
- */
-export function visitWithTypeInfo(
-  typeInfo: TypeInfo,
-  visitor: Visitor<ASTKindToNode>,
-): Visitor<ASTKindToNode> {
-  return {
-    enter(node) {
-      typeInfo.enter(node);
-      const fn = getVisitFn(visitor, node.kind, /* isLeaving */ false);
-      if (fn) {
-        const result = fn.apply(visitor, arguments);
-        if (result !== undefined) {
-          typeInfo.leave(node);
-          if (isNode(result)) {
-            typeInfo.enter(result);
-          }
-        }
-        return result;
-      }
-    },
-    leave(node) {
-      const fn = getVisitFn(visitor, node.kind, /* isLeaving */ true);
-      let result;
-      if (fn) {
-        result = fn.apply(visitor, arguments);
-      }
-      typeInfo.leave(node);
-      return result;
     },
   };
 }

@@ -1,27 +1,17 @@
 // @flow strict
 
 import inspect from '../../jsutils/inspect';
-import { type ValidationContext } from '../ValidationContext';
+
 import { GraphQLError } from '../../error/GraphQLError';
+
 import { type ASTVisitor } from '../../language/visitor';
-import { doTypesOverlap } from '../../utilities/typeComparators';
-import { typeFromAST } from '../../utilities/typeFromAST';
+
 import { isCompositeType } from '../../type/definition';
 
-export function typeIncompatibleSpreadMessage(
-  fragName: string,
-  parentType: string,
-  fragType: string,
-): string {
-  return `Fragment "${fragName}" cannot be spread here as objects of type "${parentType}" can never be of type "${fragType}".`;
-}
+import { typeFromAST } from '../../utilities/typeFromAST';
+import { doTypesOverlap } from '../../utilities/typeComparators';
 
-export function typeIncompatibleAnonSpreadMessage(
-  parentType: string,
-  fragType: string,
-): string {
-  return `Fragment cannot be spread here as objects of type "${parentType}" can never be of type "${fragType}".`;
-}
+import { type ValidationContext } from '../ValidationContext';
 
 /**
  * Possible fragment spread
@@ -42,12 +32,11 @@ export function PossibleFragmentSpreads(
         isCompositeType(parentType) &&
         !doTypesOverlap(context.getSchema(), fragType, parentType)
       ) {
+        const parentTypeStr = inspect(parentType);
+        const fragTypeStr = inspect(fragType);
         context.reportError(
           new GraphQLError(
-            typeIncompatibleAnonSpreadMessage(
-              inspect(parentType),
-              inspect(fragType),
-            ),
+            `Fragment cannot be spread here as objects of type "${parentTypeStr}" can never be of type "${fragTypeStr}".`,
             node,
           ),
         );
@@ -62,13 +51,11 @@ export function PossibleFragmentSpreads(
         parentType &&
         !doTypesOverlap(context.getSchema(), fragType, parentType)
       ) {
+        const parentTypeStr = inspect(parentType);
+        const fragTypeStr = inspect(fragType);
         context.reportError(
           new GraphQLError(
-            typeIncompatibleSpreadMessage(
-              fragName,
-              inspect(parentType),
-              inspect(fragType),
-            ),
+            `Fragment "${fragName}" cannot be spread here as objects of type "${parentTypeStr}" can never be of type "${fragTypeStr}".`,
             node,
           ),
         );

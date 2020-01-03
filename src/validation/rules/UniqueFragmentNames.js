@@ -1,12 +1,9 @@
 // @flow strict
 
-import { type ASTValidationContext } from '../ValidationContext';
 import { GraphQLError } from '../../error/GraphQLError';
 import { type ASTVisitor } from '../../language/visitor';
 
-export function duplicateFragmentNameMessage(fragName: string): string {
-  return `There can be only one fragment named "${fragName}".`;
-}
+import { type ASTValidationContext } from '../ValidationContext';
 
 /**
  * Unique fragment names
@@ -21,10 +18,10 @@ export function UniqueFragmentNames(context: ASTValidationContext): ASTVisitor {
       const fragmentName = node.name.value;
       if (knownFragmentNames[fragmentName]) {
         context.reportError(
-          new GraphQLError(duplicateFragmentNameMessage(fragmentName), [
-            knownFragmentNames[fragmentName],
-            node.name,
-          ]),
+          new GraphQLError(
+            `There can be only one fragment named "${fragmentName}".`,
+            [knownFragmentNames[fragmentName], node.name],
+          ),
         );
       } else {
         knownFragmentNames[fragmentName] = node.name;

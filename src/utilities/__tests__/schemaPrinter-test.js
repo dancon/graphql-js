@@ -1,27 +1,29 @@
 // @flow strict
 
-import { describe, it } from 'mocha';
 import { expect } from 'chai';
+import { describe, it } from 'mocha';
+
 import dedent from '../../jsutils/dedent';
-import { printSchema, printIntrospectionSchema } from '../schemaPrinter';
-import { buildSchema } from '../buildASTSchema';
+
+import { DirectiveLocation } from '../../language/directiveLocation';
+
+import { GraphQLSchema } from '../../type/schema';
+import { GraphQLDirective } from '../../type/directives';
+import { GraphQLInt, GraphQLString, GraphQLBoolean } from '../../type/scalars';
 import {
   assertObjectType,
-  GraphQLSchema,
-  GraphQLInputObjectType,
+  GraphQLList,
+  GraphQLNonNull,
   GraphQLScalarType,
   GraphQLObjectType,
   GraphQLInterfaceType,
   GraphQLUnionType,
   GraphQLEnumType,
-  GraphQLString,
-  GraphQLInt,
-  GraphQLBoolean,
-  GraphQLList,
-  GraphQLNonNull,
-} from '../../';
-import { GraphQLDirective } from '../../type/directives';
-import { DirectiveLocation } from '../../language/directiveLocation';
+  GraphQLInputObjectType,
+} from '../../type/definition';
+
+import { buildSchema } from '../buildASTSchema';
+import { printSchema, printIntrospectionSchema } from '../schemaPrinter';
 
 function printForTest(schema) {
   const schemaText = printSchema(schema);
@@ -306,8 +308,8 @@ describe('Type System Printer', () => {
       fields: { str: { type: GraphQLString } },
     });
 
-    const BaazType = new GraphQLInterfaceType({
-      name: 'Baaz',
+    const BazType = new GraphQLInterfaceType({
+      name: 'Baz',
       fields: { int: { type: GraphQLInt } },
     });
 
@@ -317,23 +319,78 @@ describe('Type System Printer', () => {
         str: { type: GraphQLString },
         int: { type: GraphQLInt },
       },
-      interfaces: [FooType, BaazType],
+      interfaces: [FooType, BazType],
     });
 
     const Schema = new GraphQLSchema({ types: [BarType] });
     const output = printForTest(Schema);
     expect(output).to.equal(dedent`
-      interface Baaz {
+      type Bar implements Foo & Baz {
+        str: String
         int: Int
       }
 
-      type Bar implements Foo & Baaz {
-        str: String
+      interface Baz {
         int: Int
       }
 
       interface Foo {
         str: String
+      }
+    `);
+  });
+
+  it('Print Hierarchical Interface', () => {
+    const FooType = new GraphQLInterfaceType({
+      name: 'Foo',
+      fields: { str: { type: GraphQLString } },
+    });
+
+    const BazType = new GraphQLInterfaceType({
+      name: 'Baz',
+      interfaces: [FooType],
+      fields: {
+        int: { type: GraphQLInt },
+        str: { type: GraphQLString },
+      },
+    });
+
+    const BarType = new GraphQLObjectType({
+      name: 'Bar',
+      fields: {
+        str: { type: GraphQLString },
+        int: { type: GraphQLInt },
+      },
+      interfaces: [FooType, BazType],
+    });
+
+    const Query = new GraphQLObjectType({
+      name: 'Query',
+      fields: { bar: { type: BarType } },
+    });
+
+    const Schema = new GraphQLSchema({
+      query: Query,
+      types: [BarType],
+    });
+    const output = printForTest(Schema);
+    expect(output).to.equal(dedent`
+      type Bar implements Foo & Baz {
+        str: String
+        int: Int
+      }
+
+      interface Baz implements Foo {
+        int: Int
+        str: String
+      }
+
+      interface Foo {
+        str: String
+      }
+
+      type Query {
+        bar: Bar
       }
     `);
   });
@@ -481,6 +538,20 @@ describe('Type System Printer', () => {
     `);
   });
 
+  it('Prints an empty description', () => {
+    const output = printSingleFieldSchema({
+      type: GraphQLString,
+      description: '',
+    });
+
+    expect(output).to.equal(dedent`
+      type Query {
+        """"""
+        singleField: String
+      }
+    `);
+  });
+
   it('One-line prints a short description', () => {
     const description = 'This field is awesome';
     const output = printSingleFieldSchema({
@@ -522,9 +593,7 @@ describe('Type System Printer', () => {
       """Marks an element of a GraphQL schema as no longer supported."""
       directive @deprecated(
         """
-        Explains why this element was deprecated, usually also including a suggestion
-        for how to access supported similar data. Formatted using the Markdown syntax
-        (as specified by [CommonMark](https://commonmark.org/).
+        Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formatted using the Markdown syntax, as specified by [CommonMark](https://commonmark.org/).
         """
         reason: String = "No longer supported"
       ) on FIELD_DEFINITION | ENUM_VALUE
@@ -532,10 +601,7 @@ describe('Type System Printer', () => {
       """
       A Directive provides a way to describe alternate runtime execution and type validation behavior in a GraphQL document.
 
-      In some cases, you need to provide options to alter GraphQL's execution behavior
-      in ways field arguments will not suffice, such as conditionally including or
-      skipping a field. Directives provide this by describing additional information
-      to the executor.
+      In some cases, you need to provide options to alter GraphQL's execution behavior in ways field arguments will not suffice, such as conditionally including or skipping a field. Directives provide this by describing additional information to the executor.
       """
       type __Directive {
         name: String!
@@ -545,8 +611,7 @@ describe('Type System Printer', () => {
       }
 
       """
-      A Directive can be adjacent to many parts of the GraphQL language, a
-      __DirectiveLocation describes one such possible adjacencies.
+      A Directive can be adjacent to many parts of the GraphQL language, a __DirectiveLocation describes one such possible adjacencies.
       """
       enum __DirectiveLocation {
         """Location adjacent to a query operation."""
@@ -608,9 +673,7 @@ describe('Type System Printer', () => {
       }
 
       """
-      One possible value for a given Enum. Enum values are unique values, not a
-      placeholder for a string or numeric value. However an Enum value is returned in
-      a JSON response as a string.
+      One possible value for a given Enum. Enum values are unique values, not a placeholder for a string or numeric value. However an Enum value is returned in a JSON response as a string.
       """
       type __EnumValue {
         name: String!
@@ -620,8 +683,7 @@ describe('Type System Printer', () => {
       }
 
       """
-      Object and Interface types are described by a list of Fields, each of which has
-      a name, potentially a list of arguments, and a return type.
+      Object and Interface types are described by a list of Fields, each of which has a name, potentially a list of arguments, and a return type.
       """
       type __Field {
         name: String!
@@ -633,9 +695,7 @@ describe('Type System Printer', () => {
       }
 
       """
-      Arguments provided to Fields or Directives and the input fields of an
-      InputObject are represented as Input Values which describe their type and
-      optionally a default value.
+      Arguments provided to Fields or Directives and the input fields of an InputObject are represented as Input Values which describe their type and optionally a default value.
       """
       type __InputValue {
         name: String!
@@ -649,9 +709,7 @@ describe('Type System Printer', () => {
       }
 
       """
-      A GraphQL Schema defines the capabilities of a GraphQL server. It exposes all
-      available types and directives on the server, as well as the entry points for
-      query, mutation, and subscription operations.
+      A GraphQL Schema defines the capabilities of a GraphQL server. It exposes all available types and directives on the server, as well as the entry points for query, mutation, and subscription operations.
       """
       type __Schema {
         """A list of all types supported by this server."""
@@ -675,14 +733,9 @@ describe('Type System Printer', () => {
       }
 
       """
-      The fundamental unit of any GraphQL Schema is the type. There are many kinds of
-      types in GraphQL as represented by the \`__TypeKind\` enum.
+      The fundamental unit of any GraphQL Schema is the type. There are many kinds of types in GraphQL as represented by the \`__TypeKind\` enum.
 
-      Depending on the kind of a type, certain fields describe information about that
-      type. Scalar types provide no information beyond a name and description, while
-      Enum types provide their values. Object and Interface types provide the fields
-      they describe. Abstract types, Union and Interface, provide the Object types
-      possible at runtime. List and NonNull types compose other types.
+      Depending on the kind of a type, certain fields describe information about that type. Scalar types provide no information beyond a name and description, while Enum types provide their values. Object and Interface types provide the fields they describe. Abstract types, Union and Interface, provide the Object types possible at runtime. List and NonNull types compose other types.
       """
       type __Type {
         kind: __TypeKind!
@@ -707,7 +760,7 @@ describe('Type System Printer', () => {
         OBJECT
 
         """
-        Indicates this type is an interface. \`fields\` and \`possibleTypes\` are valid fields.
+        Indicates this type is an interface. \`fields\`, \`interfaces\`, and \`possibleTypes\` are valid fields.
         """
         INTERFACE
 
@@ -752,18 +805,13 @@ describe('Type System Printer', () => {
 
       # Marks an element of a GraphQL schema as no longer supported.
       directive @deprecated(
-        # Explains why this element was deprecated, usually also including a suggestion
-        # for how to access supported similar data. Formatted using the Markdown syntax
-        # (as specified by [CommonMark](https://commonmark.org/).
+        # Explains why this element was deprecated, usually also including a suggestion for how to access supported similar data. Formatted using the Markdown syntax, as specified by [CommonMark](https://commonmark.org/).
         reason: String = "No longer supported"
       ) on FIELD_DEFINITION | ENUM_VALUE
 
       # A Directive provides a way to describe alternate runtime execution and type validation behavior in a GraphQL document.
       #
-      # In some cases, you need to provide options to alter GraphQL's execution behavior
-      # in ways field arguments will not suffice, such as conditionally including or
-      # skipping a field. Directives provide this by describing additional information
-      # to the executor.
+      # In some cases, you need to provide options to alter GraphQL's execution behavior in ways field arguments will not suffice, such as conditionally including or skipping a field. Directives provide this by describing additional information to the executor.
       type __Directive {
         name: String!
         description: String
@@ -771,8 +819,7 @@ describe('Type System Printer', () => {
         args: [__InputValue!]!
       }
 
-      # A Directive can be adjacent to many parts of the GraphQL language, a
-      # __DirectiveLocation describes one such possible adjacencies.
+      # A Directive can be adjacent to many parts of the GraphQL language, a __DirectiveLocation describes one such possible adjacencies.
       enum __DirectiveLocation {
         # Location adjacent to a query operation.
         QUERY
@@ -832,9 +879,7 @@ describe('Type System Printer', () => {
         INPUT_FIELD_DEFINITION
       }
 
-      # One possible value for a given Enum. Enum values are unique values, not a
-      # placeholder for a string or numeric value. However an Enum value is returned in
-      # a JSON response as a string.
+      # One possible value for a given Enum. Enum values are unique values, not a placeholder for a string or numeric value. However an Enum value is returned in a JSON response as a string.
       type __EnumValue {
         name: String!
         description: String
@@ -842,8 +887,7 @@ describe('Type System Printer', () => {
         deprecationReason: String
       }
 
-      # Object and Interface types are described by a list of Fields, each of which has
-      # a name, potentially a list of arguments, and a return type.
+      # Object and Interface types are described by a list of Fields, each of which has a name, potentially a list of arguments, and a return type.
       type __Field {
         name: String!
         description: String
@@ -853,9 +897,7 @@ describe('Type System Printer', () => {
         deprecationReason: String
       }
 
-      # Arguments provided to Fields or Directives and the input fields of an
-      # InputObject are represented as Input Values which describe their type and
-      # optionally a default value.
+      # Arguments provided to Fields or Directives and the input fields of an InputObject are represented as Input Values which describe their type and optionally a default value.
       type __InputValue {
         name: String!
         description: String
@@ -865,9 +907,7 @@ describe('Type System Printer', () => {
         defaultValue: String
       }
 
-      # A GraphQL Schema defines the capabilities of a GraphQL server. It exposes all
-      # available types and directives on the server, as well as the entry points for
-      # query, mutation, and subscription operations.
+      # A GraphQL Schema defines the capabilities of a GraphQL server. It exposes all available types and directives on the server, as well as the entry points for query, mutation, and subscription operations.
       type __Schema {
         # A list of all types supported by this server.
         types: [__Type!]!
@@ -885,14 +925,9 @@ describe('Type System Printer', () => {
         directives: [__Directive!]!
       }
 
-      # The fundamental unit of any GraphQL Schema is the type. There are many kinds of
-      # types in GraphQL as represented by the \`__TypeKind\` enum.
+      # The fundamental unit of any GraphQL Schema is the type. There are many kinds of types in GraphQL as represented by the \`__TypeKind\` enum.
       #
-      # Depending on the kind of a type, certain fields describe information about that
-      # type. Scalar types provide no information beyond a name and description, while
-      # Enum types provide their values. Object and Interface types provide the fields
-      # they describe. Abstract types, Union and Interface, provide the Object types
-      # possible at runtime. List and NonNull types compose other types.
+      # Depending on the kind of a type, certain fields describe information about that type. Scalar types provide no information beyond a name and description, while Enum types provide their values. Object and Interface types provide the fields they describe. Abstract types, Union and Interface, provide the Object types possible at runtime. List and NonNull types compose other types.
       type __Type {
         kind: __TypeKind!
         name: String
@@ -913,7 +948,7 @@ describe('Type System Printer', () => {
         # Indicates this type is an object. \`fields\` and \`interfaces\` are valid fields.
         OBJECT
 
-        # Indicates this type is an interface. \`fields\` and \`possibleTypes\` are valid fields.
+        # Indicates this type is an interface. \`fields\`, \`interfaces\`, and \`possibleTypes\` are valid fields.
         INTERFACE
 
         # Indicates this type is a union. \`possibleTypes\` is a valid field.

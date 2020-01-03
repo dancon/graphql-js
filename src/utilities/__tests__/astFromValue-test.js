@@ -1,19 +1,23 @@
 // @flow strict
 
-import { describe, it } from 'mocha';
 import { expect } from 'chai';
-import { astFromValue } from '../astFromValue';
+import { describe, it } from 'mocha';
+
 import {
-  GraphQLEnumType,
-  GraphQLInputObjectType,
-  GraphQLList,
+  GraphQLID,
   GraphQLInt,
   GraphQLFloat,
   GraphQLString,
   GraphQLBoolean,
-  GraphQLID,
+} from '../../type/scalars';
+import {
+  GraphQLList,
   GraphQLNonNull,
-} from '../../type';
+  GraphQLEnumType,
+  GraphQLInputObjectType,
+} from '../../type/definition';
+
+import { astFromValue } from '../astFromValue';
 
 describe('astFromValue', () => {
   it('converts boolean values to ASTs', () => {

@@ -1,12 +1,9 @@
 // @flow strict
 
-import { type ASTValidationContext } from '../ValidationContext';
 import { GraphQLError } from '../../error/GraphQLError';
 import { type ASTVisitor } from '../../language/visitor';
 
-export function duplicateArgMessage(argName: string): string {
-  return `There can be only one argument named "${argName}".`;
-}
+import { type ASTValidationContext } from '../ValidationContext';
 
 /**
  * Unique argument names
@@ -27,10 +24,10 @@ export function UniqueArgumentNames(context: ASTValidationContext): ASTVisitor {
       const argName = node.name.value;
       if (knownArgNames[argName]) {
         context.reportError(
-          new GraphQLError(duplicateArgMessage(argName), [
-            knownArgNames[argName],
-            node.name,
-          ]),
+          new GraphQLError(
+            `There can be only one argument named "${argName}".`,
+            [knownArgNames[argName], node.name],
+          ),
         );
       } else {
         knownArgNames[argName] = node.name;

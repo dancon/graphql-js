@@ -1,38 +1,19 @@
 // @flow strict
 
+import didYouMean from '../../jsutils/didYouMean';
+import suggestionList from '../../jsutils/suggestionList';
+
+import { GraphQLError } from '../../error/GraphQLError';
+
+import { Kind } from '../../language/kinds';
+import { type ASTVisitor } from '../../language/visitor';
+
+import { specifiedDirectives } from '../../type/directives';
+
 import {
   type ValidationContext,
   type SDLValidationContext,
 } from '../ValidationContext';
-import { GraphQLError } from '../../error/GraphQLError';
-import { type ASTVisitor } from '../../language/visitor';
-import suggestionList from '../../jsutils/suggestionList';
-import didYouMean from '../../jsutils/didYouMean';
-import { Kind } from '../../language/kinds';
-import { specifiedDirectives } from '../../type/directives';
-
-export function unknownArgMessage(
-  argName: string,
-  fieldName: string,
-  typeName: string,
-  suggestedArgs: Array<string>,
-): string {
-  return (
-    `Unknown argument "${argName}" on field "${fieldName}" of type "${typeName}".` +
-    didYouMean(suggestedArgs.map(x => `"${x}"`))
-  );
-}
-
-export function unknownDirectiveArgMessage(
-  argName: string,
-  directiveName: string,
-  suggestedArgs: Array<string>,
-): string {
-  return (
-    `Unknown argument "${argName}" on directive "@${directiveName}".` +
-    didYouMean(suggestedArgs.map(x => `"${x}"`))
-  );
-}
 
 /**
  * Known argument names
@@ -51,14 +32,11 @@ export function KnownArgumentNames(context: ValidationContext): ASTVisitor {
       if (!argDef && fieldDef && parentType) {
         const argName = argNode.name.value;
         const knownArgsNames = fieldDef.args.map(arg => arg.name);
+        const suggestions = suggestionList(argName, knownArgsNames);
         context.reportError(
           new GraphQLError(
-            unknownArgMessage(
-              argName,
-              fieldDef.name,
-              parentType.name,
-              suggestionList(argName, knownArgsNames),
-            ),
+            `Unknown argument "${argName}" on field "${parentType.name}.${fieldDef.name}".` +
+              didYouMean(suggestions),
             argNode,
           ),
         );
@@ -67,7 +45,9 @@ export function KnownArgumentNames(context: ValidationContext): ASTVisitor {
   };
 }
 
-// @internal
+/**
+ * @internal
+ */
 export function KnownArgumentNamesOnDirectives(
   context: ValidationContext | SDLValidationContext,
 ): ASTVisitor {
@@ -102,7 +82,8 @@ export function KnownArgumentNamesOnDirectives(
             const suggestions = suggestionList(argName, knownArgs);
             context.reportError(
               new GraphQLError(
-                unknownDirectiveArgMessage(argName, directiveName, suggestions),
+                `Unknown argument "${argName}" on directive "@${directiveName}".` +
+                  didYouMean(suggestions),
                 argNode,
               ),
             );
